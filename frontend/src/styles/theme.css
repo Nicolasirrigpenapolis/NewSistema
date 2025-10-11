@@ -1,0 +1,9 @@
+/* Tema simplificado - Usando apenas Tailwind */
+
+/* Variáveis complementares (se necessário) */
+:root {
+  /* Apenas variáveis que não estão no Tailwind padrão */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 200ms ease-in-out;
+  --transition-slow: 300ms ease-in-out;
+}

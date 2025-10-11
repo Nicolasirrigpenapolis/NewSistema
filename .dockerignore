@@ -1,0 +1,74 @@
+# =============================
+# Diretórios de build .NET
+# =============================
+bin/
+obj/
+**/bin/
+**/obj/
+
+# =============================
+# Node / Frontend
+# =============================
+frontend/node_modules/
+**/node_modules/
+frontend/build/
+
+# =============================
+# Cobertura / relatórios
+# =============================
+coverage/
+nyc_output/
+
+# =============================
+# Logs / temporários
+# =============================
+*.log
+**/chrome-devtools-mcp.log
+*.pid
+.tmp/
+.temp/
+
+# =============================
+# Ambientes / segredos
+# =============================
+.env
+.env.*
+!.env.example
+*.UserSecrets/
+
+# =============================
+# Certificados (não enviar p/ build)
+# =============================
+certificados/*.pfx
+certificados/*.cer
+certificados/*.pem
+
+# =============================
+# Sistema Operacional / Editor
+# =============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =============================
+# Git
+# =============================
+.git
+.gitignore
+
+# =============================
+# Documentação: manter (NÃO ignorar .md)
+# =============================
+# (Removido padrão que ignorava todos os .md)
+
+# =============================
+# Scripts: manter (antes eram ignorados)
+# =============================
+# scripts/
+
+# =============================
+# Bibliotecas temporárias (se gerarem diretórios grandes)
+# =============================
+
+# Fim

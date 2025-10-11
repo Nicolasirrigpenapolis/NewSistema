@@ -1,0 +1,310 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tema claro profissional - Sistema NFe/CTe/MDFe */
+    --background: 210 20% 98%;           /* Cinza neutro muito claro */
+    --foreground: 222 47% 11%;           /* Texto escuro profissional */
+    --card: 0 0% 100%;                   /* Cards branco puro */
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 158 64% 42%;              /* Verde da logo IP (#2a9d5f) */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 16% 93%;            /* Cinza claro */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 16% 96%;                /* Fundo de elementos desativados */
+    --muted-foreground: 215 16% 47%;     /* Texto secundário neutro */
+    --accent: 210 16% 95%;               /* Hover states cinza claro */
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;               /* Bordas cinza neutro */
+    --input: 210 20% 97%;                /* Inputs cinza muito claro */
+    --ring: 158 64% 42%;                 /* Focus ring verde IP */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Tema azul moderno - inspirado em VSCode, Linear, Vercel */
+    --background: 220 26% 14%;        /* Azul-acinzentado moderno */
+    --foreground: 213 31% 91%;        /* Texto claro e suave */
+    --card: 220 26% 18%;              /* Cards levemente mais claros */
+    --card-foreground: 213 31% 91%;
+    --popover: 220 26% 18%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 217 91% 60%;           /* Azul vibrante */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 17% 20%;         /* Elementos secundários */
+    --secondary-foreground: 213 31% 91%;
+    --muted: 220 17% 20%;             /* Fundo de elementos desativados */
+    --muted-foreground: 217 10% 64%;  /* Texto secundário */
+    --accent: 220 26% 22%;            /* Hover states */
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 84% 60%;         /* Vermelho vibrante */
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 26% 18%;            /* Bordas invisíveis (mesma cor do card) */
+    --input: 220 17% 20%;             /* Inputs */
+    --ring: 217 91% 60%;              /* Focus ring azul */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* Remover TODOS os outlines e focus rings de TODOS os elementos */
+  * {
+    outline: none !important;
+  }
+
+  *::before,
+  *::after {
+    outline: none !important;
+  }
+
+  *:hover,
+  *:focus,
+  *:active,
+  *:focus-visible,
+  *:focus-within {
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-style: none !important;
+    outline-color: transparent !important;
+  }
+
+  /* Regras específicas para elementos interativos */
+  button,
+  button *,
+  button:hover,
+  button:hover *,
+  button:focus,
+  button:active,
+  a,
+  a *,
+  a:hover,
+  a:hover *,
+  a:focus,
+  input,
+  select,
+  textarea,
+  img,
+  svg,
+  div[role="button"],
+  [role="button"] * {
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-style: none !important;
+    outline-color: transparent !important;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Tema dark ultra-moderno - sem bordas, apenas sombras e elevação */
+  .dark {
+    /* REMOVE TODAS AS BORDAS */
+    * {
+      border-color: transparent !important;
+    }
+
+    /* Cards com sombra sutil para elevação */
+    [class*="Card"],
+    .bg-card,
+    .rounded-lg,
+    .rounded-xl {
+      border: none !important;
+      box-shadow:
+        0 1px 2px 0 rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+
+    /* Inputs modernos sem borda */
+    input,
+    textarea,
+    select {
+      border: none !important;
+      background: hsl(var(--input)) !important;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+        0 1px 2px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      box-shadow:
+        inset 0 0 0 1px hsl(var(--ring) / 0.5),
+        0 0 0 3px hsl(var(--ring) / 0.1);
+      outline: none !important;
+    }
+
+    /* Tabelas sem bordas - apenas separação com background */
+    table {
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
+    }
+
+    thead tr {
+      background: hsl(var(--muted) / 0.5) !important;
+    }
+
+    tbody tr {
+      border: none !important;
+    }
+
+    tbody tr:hover {
+      background: hsl(var(--accent)) !important;
+    }
+
+    td, th {
+      border: none !important;
+    }
+
+    /* Buttons com elevação moderna */
+    button {
+      border: none !important;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    button:hover {
+      box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    /* Botões ghost mais visíveis no dark mode */
+    button[class*="ghost"] {
+      background: hsl(var(--accent)) !important;
+      color: hsl(var(--foreground)) !important;
+    }
+
+    button[class*="ghost"]:hover {
+      background: hsl(var(--accent)) !important;
+      color: hsl(var(--primary)) !important;
+      box-shadow: 0 0 0 1px hsl(var(--primary) / 0.3) !important;
+    }
+
+    /* Botões outline mais visíveis */
+    button[class*="outline"] {
+      background: hsl(var(--accent)) !important;
+      color: hsl(var(--foreground)) !important;
+      box-shadow: 0 0 0 1px hsl(var(--border)) !important;
+    }
+
+    button[class*="outline"]:hover {
+      background: hsl(var(--primary) / 0.1) !important;
+      color: hsl(var(--primary)) !important;
+      box-shadow: 0 0 0 1px hsl(var(--primary)) !important;
+    }
+
+    /* Remove outline padrão */
+    *:focus-visible {
+      outline: none !important;
+    }
+
+    *:focus {
+      outline: none !important;
+    }
+  }
+}
+
+/* Scrollbar customizada - Profissional */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(214 32% 91%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(215 16% 60%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 16% 50%);
+}
+
+/* Classe de acessibilidade */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Classes úteis para responsividade */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animações suaves */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Container responsivo */
+.container-responsive {
+  width: 100%;
+  max-width: 100vw;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-responsive {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Melhorar foco para acessibilidade - apenas para navegação por teclado */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* Remover outline em todos os elementos ao clicar */
+*:focus {
+  outline: none;
+}
+
+/* Melhorar seleção de texto */
+::selection {
+  background-color: hsl(var(--primary) / 0.2);
+}
+
+/* Estilo para elementos desabilitados */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
