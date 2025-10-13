@@ -8,7 +8,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { PermissionProvider } from './contexts/PermissionContext';
 import { EmpresaProvider } from './contexts/EmpresaContext';
 import { MainLayout } from './components/Layout/MainLayout/MainLayout';
-import { AppRoutes } from './routes/AppRoutes';
+import { AppRoutes } from './routes';
 import './styles/globals.css';
 
 function AppContent() {

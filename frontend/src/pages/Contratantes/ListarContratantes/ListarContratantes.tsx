@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ContratanteCRUD } from '../../../components/Contratantes/ContratanteCRUD';
-import { formatCNPJ, formatCPF, cleanNumericString } from '../../../utils/formatters';
+import { useNavigate } from 'react-router-dom';
+import { formatCNPJ, formatCPF } from '../../../utils/formatters';
 import { entitiesService } from '../../../services/entitiesService';
-import Icon from '../../../components/UI/Icon';
+import { Icon } from '../../../ui';
+import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
+import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
+import { contratanteConfig } from '../../../components/Contratantes/ContratanteConfig';
 
 interface Contratante {
   id?: number;
@@ -33,6 +36,7 @@ interface PaginationData {
 }
 
 export function ListarContratantes() {
+  const navigate = useNavigate();
   const [contratantes, setContratantes] = useState<Contratante[]>([]);
   const [carregando, setCarregando] = useState(false);
 
@@ -46,22 +50,16 @@ export function ListarContratantes() {
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroUf, setFiltroUf] = useState('');
 
-  // Estados para pagina√ß√£o
+  // Estados para pagina+∫+˙o
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [tamanhoPagina, setTamanhoPagina] = useState(10);
   const [paginacao, setPaginacao] = useState<PaginationData | null>(null);
 
-  // Estados para modais
-  const [modalVisualizacao, setModalVisualizacao] = useState(false);
-  const [modalEdicao, setModalEdicao] = useState(false);
-  const [contratanteSelecionado, setContratanteSelecionado] = useState<Contratante | null>(null);
-  const [dadosFormulario, setDadosFormulario] = useState<Partial<Contratante>>({});
-  const [salvando, setSalvando] = useState(false);
-
-  // Estados do modal de exclus√£o
-  const [modalExclusao, setModalExclusao] = useState(false);
+  // Estados para visualizaÁ„o e exclus„o
+  const [contratanteVisualizacao, setContratanteVisualizacao] = useState<Contratante | null>(null);
   const [contratanteExclusao, setContratanteExclusao] = useState<Contratante | null>(null);
-  const [excludindo, setExcluindo] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
+
 
 
   useEffect(() => {
@@ -135,86 +133,32 @@ export function ListarContratantes() {
     }
   };
 
-  const abrirModalVisualizacao = (contratante: Contratante) => {
-    setContratanteSelecionado(contratante);
-    setModalVisualizacao(true);
+    const abrirVisualizacao = (contratante: Contratante) => {
+    setContratanteVisualizacao(contratante);
   };
 
-  const abrirModalEdicao = (contratante?: Contratante) => {
-    if (contratante) {
-      setContratanteSelecionado(contratante);
-      // Adicionar o campo virtual tipoDocumento baseado no que existe
-      const tipoDocumento = contratante.cnpj ? 'cnpj' : contratante.cpf ? 'cpf' : undefined;
-      setDadosFormulario({
-        ...contratante,
-        tipoDocumento
-      } as any);
-    } else {
-      setContratanteSelecionado(null);
-      setDadosFormulario({
-        tipoDocumento: 'cnpj', // Default para CNPJ
-        ativo: true,
-        codMunicipio: 0,
-        municipio: ''
-      } as any);
+  const fecharVisualizacao = () => {
+    setContratanteVisualizacao(null);
+  };
+
+  const navegarParaNovo = () => {
+    navigate('/contratantes/novo');
+  };
+
+  const navegarParaEdicao = (contratante: Contratante) => {
+    if (!contratante.id) {
+      navigate('/contratantes/novo');
+      return;
     }
-    setModalEdicao(true);
-  };
 
-  const fecharModais = () => {
-    setModalVisualizacao(false);
-    setModalEdicao(false);
-    setContratanteSelecionado(null);
-    setDadosFormulario({});
-  };
-
-
-  const salvarContratante = async (dados: Partial<Contratante>) => {
-    setSalvando(true);
-    try {
-      const dadosParaSalvar = {
-        cnpj: dados.cnpj ? cleanNumericString(dados.cnpj) : undefined,
-        cpf: dados.cpf ? cleanNumericString(dados.cpf) : undefined,
-        razaoSocial: dados.razaoSocial?.trim(),
-        nomeFantasia: dados.nomeFantasia?.trim(),
-        endereco: dados.endereco?.trim(),
-        numero: dados.numero?.trim(),
-        complemento: dados.complemento?.trim(),
-        bairro: dados.bairro?.trim(),
-        codMunicipio: dados.codMunicipio,
-        municipio: dados.municipio?.trim(),
-        cep: dados.cep ? cleanNumericString(dados.cep) : undefined,
-        uf: dados.uf?.toUpperCase(),
-        ativo: dados.ativo !== false
-      };
-
-      let resposta;
-      if (contratanteSelecionado?.id) {
-        resposta = await entitiesService.atualizarContratante(contratanteSelecionado.id, dadosParaSalvar);
-      } else {
-        resposta = await entitiesService.criarContratante(dadosParaSalvar);
-      }
-
-      if (resposta.sucesso) {
-        fecharModais();
-        carregarContratantes();
-      } else {
-        alert(`Erro ao salvar contratante: ${resposta.mensagem}`);
-      }
-    } catch (error) {
-      console.error('Erro ao salvar contratante:', error);
-    } finally {
-      setSalvando(false);
-    }
+    navigate(`/contratantes/${contratante.id}/editar`, { state: { contratante } });
   };
 
   const abrirModalExclusao = (contratante: Contratante) => {
     setContratanteExclusao(contratante);
-    setModalExclusao(true);
   };
 
   const fecharModalExclusao = () => {
-    setModalExclusao(false);
     setContratanteExclusao(null);
     setExcluindo(false);
   };
@@ -239,7 +183,6 @@ export function ListarContratantes() {
       setExcluindo(false);
     }
   };
-
   const aplicarFiltros = () => {
     setFiltro(filtroTemp);
     setFiltroTipo(filtroTipoTemp);
@@ -260,36 +203,6 @@ export function ListarContratantes() {
     setPaginaAtual(1);
   };
 
-  const atualizarCampo = (campo: string, valor: any) => {
-    setDadosFormulario(prev => ({
-      ...prev,
-      [campo]: valor
-    }));
-  };
-
-  // Callback para preencher dados automaticamente ao consultar CNPJ
-  const handleCNPJDataFetch = (data: any) => {
-    console.log('Dados recebidos da API CNPJ:', data);
-
-    // Mapear os dados da API para o formato do formul√°rio
-    const dadosMapeados: Partial<Contratante> = {
-      razaoSocial: data.razaoSocial || data.nome || '',
-      nomeFantasia: data.nomeFantasia || data.fantasia || '',
-      cep: data.cep || '',
-      endereco: data.logradouro || data.endereco || '',
-      numero: data.numero || '',
-      complemento: data.complemento || '',
-      bairro: data.bairro || '',
-      municipio: data.municipio || '',
-      uf: data.uf || '',
-      codMunicipio: data.codMunicipio || 0
-    };
-
-    console.log('Dados mapeados para o formul√°rio:', dadosMapeados);
-
-    return dadosMapeados;
-  };
-
   const tipoContratante = (contratante: Contratante) => {
     return contratante.cnpj ? 'PJ' : 'PF';
   };
@@ -304,12 +217,12 @@ export function ListarContratantes() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-1">Contratantes</h1>
-              <p className="text-muted-foreground text-lg">Gerencie os contratantes dos servi√ßos de transporte</p>
+              <p className="text-muted-foreground text-lg">Gerencie os contratantes dos servi+∫os de transporte</p>
             </div>
           </div>
           <button
             className="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-            onClick={() => abrirModalEdicao()}
+            onClick={navegarParaNovo}
           >
             <i className="fas fa-plus text-lg"></i>
             <span>Novo Contratante</span>
@@ -323,7 +236,7 @@ export function ListarContratantes() {
             <input
               type="text"
               className="w-full px-3 py-2 border border-border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
-              placeholder="Buscar por raz√£o social, CNPJ, CPF..."
+              placeholder="Buscar por raz+˙o social, CNPJ, CPF..."
               value={filtroTemp}
               onChange={(e) => setFiltroTemp(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && aplicarFiltros()}
@@ -338,8 +251,8 @@ export function ListarContratantes() {
               className="w-full px-3 py-2 border border-border rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               <option value="">Todos</option>
-              <option value="PJ">Pessoa Jur√≠dica</option>
-              <option value="PF">Pessoa F√≠sica</option>
+              <option value="PJ">Pessoa Jur+°dica</option>
+              <option value="PF">Pessoa F+°sica</option>
             </select>
           </div>
 
@@ -428,17 +341,17 @@ export function ListarContratantes() {
         ) : contratantes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6">
             <h3>Nenhum contratante encontrado</h3>
-            <p>Adicione um novo contratante para come√ßar.</p>
+            <p>Adicione um novo contratante para come+∫ar.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <div className="grid grid-cols-6 gap-4 p-4 bg-muted border-b border-border font-semibold text-foreground">
               <div className="text-center">CNPJ/CPF</div>
-              <div className="text-center">Raz√£o Social</div>
+              <div className="text-center">Raz+˙o Social</div>
               <div className="text-center">Tipo</div>
-              <div className="text-center">Localiza√ß√£o</div>
+              <div className="text-center">Localiza+∫+˙o</div>
               <div className="text-center">Status</div>
-              <div className="text-center">A√ß√µes</div>
+              <div className="text-center">A+∫+¡es</div>
             </div>
             {contratantes.map((contratante) => (
               <div key={contratante.id} className="grid grid-cols-6 gap-4 p-4 border-b border-border hover:bg-muted transition-colors duration-200">
@@ -469,13 +382,13 @@ export function ListarContratantes() {
                 <div className="flex items-center justify-center gap-2">
                   <button
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
-                    onClick={() => abrirModalVisualizacao(contratante)}
+                    onClick={() => abrirVisualizacao(contratante)}
                   >
                     Visualizar
                   </button>
                   <button
                     className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors duration-200"
-                    onClick={() => abrirModalEdicao(contratante)}
+                    onClick={() => navegarParaEdicao(contratante)}
                   >
                     Editar
                   </button>
@@ -496,7 +409,7 @@ export function ListarContratantes() {
         <div className="mt-6 bg-card border-t border-border p-4">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="text-sm text-muted-foreground">
-              Mostrando {((paginacao.currentPage - 1) * paginacao.pageSize) + 1} at√© {Math.min(paginacao.currentPage * paginacao.pageSize, paginacao.totalItems)} de {paginacao.totalItems} contratantes
+              Mostrando {((paginacao.currentPage - 1) * paginacao.pageSize) + 1} at+Æ {Math.min(paginacao.currentPage * paginacao.pageSize, paginacao.totalItems)} de {paginacao.totalItems} contratantes
             </div>
 
             {paginacao.totalPages > 1 && (
@@ -506,11 +419,11 @@ export function ListarContratantes() {
                   disabled={!paginacao.hasPreviousPage}
                   className="px-4 py-2 border border-border rounded-lg bg-card text-foreground hover:bg-card-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
-                  ‚Üê Anterior
+                  ‘Â… Anterior
                 </button>
 
                 <span className="px-4 py-2 text-foreground">
-                  P√°gina {paginacao.currentPage} de {paginacao.totalPages}
+                  P+Ìgina {paginacao.currentPage} de {paginacao.totalPages}
                 </span>
 
                 <button
@@ -518,13 +431,13 @@ export function ListarContratantes() {
                   disabled={!paginacao.hasNextPage}
                   className="px-4 py-2 border border-border rounded-lg bg-card text-foreground hover:bg-card-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
-                  Pr√≥xima ‚Üí
+                  Pr+¶xima ‘Â∆
                 </button>
               </div>
             )}
 
             <div className="flex items-center gap-2">
-              <label className="text-sm text-foreground">Itens por p√°gina:</label>
+              <label className="text-sm text-foreground">Itens por p+Ìgina:</label>
               <select
                 value={tamanhoPagina}
                 onChange={(e) => {
@@ -544,25 +457,40 @@ export function ListarContratantes() {
         </div>
       )}
 
-      <ContratanteCRUD
-        viewModalOpen={modalVisualizacao}
-        formModalOpen={modalEdicao}
-        deleteModalOpen={modalExclusao}
-        selectedContratante={contratanteSelecionado}
-        isEdit={!!contratanteSelecionado}
-        onViewClose={fecharModais}
-        onFormClose={fecharModais}
-        onDeleteClose={fecharModalExclusao}
-        onSave={salvarContratante}
-        onEdit={(contratante) => abrirModalEdicao(contratante)}
-        onDelete={confirmarExclusao}
-        onCNPJDataFetch={handleCNPJDataFetch}
-        onFieldChange={atualizarCampo}
-        formData={dadosFormulario}
-        saving={salvando}
-        deleting={excludindo}
+            <GenericViewModal
+        isOpen={!!contratanteVisualizacao}
+        onClose={fecharVisualizacao}
+        item={contratanteVisualizacao}
+        title={contratanteConfig.view.title}
+        subtitle={contratanteConfig.view.subtitle}
+        headerIcon={contratanteConfig.view.headerIcon}
+        headerColor={contratanteConfig.view.headerColor}
+        sections={contratanteVisualizacao ? contratanteConfig.view.getSections(contratanteVisualizacao) : []}
+        actions={contratanteVisualizacao ? [{
+          label: 'Editar Contratante',
+          icon: 'edit',
+          variant: 'warning' as const,
+          onClick: () => {
+            if (contratanteVisualizacao) {
+              fecharVisualizacao();
+              navegarParaEdicao(contratanteVisualizacao);
+            }
+          }
+        }] : []}
+        statusConfig={contratanteVisualizacao ? contratanteConfig.view.getStatusConfig?.(contratanteVisualizacao) : undefined}
+        idField={contratanteConfig.view.idField}
+      />
+      <ConfirmDeleteModal
+        isOpen={!!contratanteExclusao}
+        title="Excluir Contratante"
+        message="Tem certeza de que deseja excluir este contratante?"
+        itemName={contratanteExclusao ? `${contratanteExclusao.razaoSocial}${contratanteExclusao.cnpj ? ` (${formatCNPJ(contratanteExclusao.cnpj)})` : contratanteExclusao.cpf ? ` (${formatCPF(contratanteExclusao.cpf)})` : ''}` : ''}
+        onConfirm={confirmarExclusao}
+        onClose={fecharModalExclusao}
+        loading={excluindo}
       />
       </div>
     </div>
   );
 }
+

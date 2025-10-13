@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Icon from '../../../components/UI/Icon';
+import { Icon } from '../../../ui';
 import { relatoriosService, RelatorioManutencaoFiltro, RelatorioManutencaoItem, PagedResult } from '../../../services/relatoriosService';
 import { manutencoesService } from '../../../services/manutencoesService';
 

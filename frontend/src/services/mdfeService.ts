@@ -155,9 +155,15 @@ class MDFeService {
    * Transmitir MDFe
    */
   async transmitirMDFe(id: number): Promise<RespostaAPI> {
-    return this.request(`/mdfe/${id}/transmitir`, {
+    const resposta = await this.request(`/mdfe/${id}/transmitir`, {
       method: 'POST'
     });
+
+    if (resposta.sucesso && resposta.dados?.resultado) {
+      resposta.dados = resposta.dados.resultado;
+    }
+
+    return resposta;
   }
 
   /**

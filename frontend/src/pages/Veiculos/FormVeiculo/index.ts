@@ -1,0 +1,1 @@
+export { FormVeiculo } from './FormVeiculo';

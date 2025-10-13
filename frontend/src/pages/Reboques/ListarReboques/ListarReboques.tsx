@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ReboqueCRUD } from '../../../components/Reboques/ReboqueCRUD';
+import { useNavigate } from 'react-router-dom';
 import { reboquesService, ReboqueList, ReboqueDetail } from '../../../services/reboquesService';
 import Icon from '../../../components/UI/Icon';
-
+import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
+import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
+import { reboqueConfig } from '../../../components/Reboques/ReboqueConfig';
 import { formatPlaca } from '../../../utils/formatters';
 import { getTipoRodadoNome, getTipoCarroceriaNome } from '../../../utils/mappings';
 interface PaginationData {
@@ -35,13 +37,10 @@ export function ListarReboques() {
 
   // Estados dos modais CRUD
   const [modalVisualizacao, setModalVisualizacao] = useState(false);
-  const [modalFormulario, setModalFormulario] = useState(false);
   const [modalExclusao, setModalExclusao] = useState(false);
   const [reboqueAtual, setReboqueAtual] = useState<ReboqueDetail | null>(null);
-  const [modoEdicao, setModoEdicao] = useState(false);
 
   // Estados de loading
-  const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
 
   useEffect(() => {
@@ -85,23 +84,13 @@ export function ListarReboques() {
   };
 
   // Handlers dos modais
-  const abrirModalNovo = () => {
-    setReboqueAtual(null);
-    setModoEdicao(false);
-    setModalFormulario(true);
-  };
+  const navigate = useNavigate();
 
-  const abrirModalEdicao = async (reboque: ReboqueList) => {
-    try {
-      const response = await reboquesService.buscarReboque(reboque.id);
-      if (response.sucesso && response.data) {
-        setReboqueAtual(response.data);
-        setModoEdicao(true);
-        setModalFormulario(true);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar reboque:', error);
-    }
+  const abrirNovo = () => navigate('/reboques/novo');
+
+  const abrirEdicao = async (reboque: ReboqueList) => {
+    // prefer loading details in the edit page; pass summary via state
+    navigate(`/reboques/${reboque.id}/editar`, { state: { reboque } });
   };
 
   const abrirModalVisualizacao = async (reboque: ReboqueList) => {
@@ -130,36 +119,8 @@ export function ListarReboques() {
 
   const fecharModais = () => {
     setModalVisualizacao(false);
-    setModalFormulario(false);
     setModalExclusao(false);
     setReboqueAtual(null);
-    setModoEdicao(false);
-  };
-
-  // Handlers de CRUD
-  const handleSave = async (dadosReboque: ReboqueDetail) => {
-    try {
-      setSalvando(true);
-
-      let resposta;
-      if (modoEdicao && reboqueAtual?.id) {
-        resposta = await reboquesService.atualizarReboque(reboqueAtual.id, dadosReboque);
-      } else {
-        resposta = await reboquesService.criarReboque(dadosReboque);
-      }
-
-      if (resposta.sucesso) {
-        fecharModais();
-        carregarReboques();
-      } else {
-        throw new Error(resposta.mensagem || 'Erro ao salvar reboque');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar reboque:', error);
-      throw error; // Re-throw para que o modal possa mostrar o erro
-    } finally {
-      setSalvando(false);
-    }
   };
 
   const handleDelete = async () => {
@@ -265,7 +226,7 @@ export function ListarReboques() {
           </div>
           <button
             className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-            onClick={abrirModalNovo}
+            onClick={abrirNovo}
           >
             <Icon name="plus" size="lg" />
             <span>Novo Reboque</span>
@@ -409,7 +370,7 @@ export function ListarReboques() {
                     </button>
                     <button
                       className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
-                      onClick={() => abrirModalEdicao(reboque)}
+                      onClick={() => abrirEdicao(reboque)}
                       title="Editar"
                     >
                       <Icon name="edit" />
@@ -480,23 +441,47 @@ export function ListarReboques() {
           </div>
         )}
 
-        {/* Modais CRUD */}
-        <ReboqueCRUD
-          viewModalOpen={modalVisualizacao}
-          formModalOpen={modalFormulario}
-          deleteModalOpen={modalExclusao}
-          selectedReboque={reboqueAtual}
-          isEdit={modoEdicao}
-          onViewClose={fecharModais}
-          onFormClose={fecharModais}
-          onDeleteClose={fecharModais}
-          onSave={handleSave}
-          onEdit={abrirModalEdicao}
-          onDelete={handleDelete}
-          saving={salvando}
-          deleting={excluindo}
+        {/* Modal de visualização */}
+        <GenericViewModal
+          isOpen={modalVisualizacao}
+          onClose={fecharModais}
+          item={reboqueAtual}
+          title={reboqueConfig.view.title}
+          subtitle={reboqueConfig.view.subtitle}
+          headerIcon={reboqueConfig.view.headerIcon}
+          headerColor={reboqueConfig.view.headerColor}
+          sections={reboqueAtual ? reboqueConfig.view.getSections(reboqueAtual) : []}
+          actions={
+            reboqueAtual
+              ? [
+                  {
+                    label: 'Editar Reboque',
+                    icon: 'edit',
+                    variant: 'warning' as const,
+                    onClick: () => {
+                      fecharModais();
+                      abrirEdicao(reboqueAtual);
+                    }
+                  }
+                ]
+              : []
+          }
+          statusConfig={reboqueAtual ? reboqueConfig.view.getStatusConfig?.(reboqueAtual) : undefined}
+          idField={reboqueConfig.view.idField}
+        />
+
+        {/* Modal de exclusão */}
+        <ConfirmDeleteModal
+          isOpen={modalExclusao}
+          title="Excluir Reboque"
+          message="Tem certeza de que deseja excluir este reboque?"
+          itemName={reboqueAtual ? `reboque ${formatPlaca(reboqueAtual.placa)}` : ''}
+          onConfirm={handleDelete}
+          onClose={fecharModais}
+          loading={excluindo}
         />
       </div>
     </div>
   );
 }
+

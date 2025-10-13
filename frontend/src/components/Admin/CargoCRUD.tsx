@@ -105,7 +105,7 @@ export function CargoCRUD({
           isOpen={showDeleteModal}
           itemName={`cargo "${selectedItem.nome}"`}
           onConfirm={onDelete}
-          onCancel={onCloseModals}
+          onClose={onCloseModals}
           loading={deleting}
         />
       )}

@@ -157,9 +157,17 @@ builder.Services.AddSingleton<ICacheService, CacheService>();
 
 // Register application services
 builder.Services.AddScoped<IMDFeService, MDFeService>();
+
 // Registro condicional do provider MDFe
-// Provider MDFe: apenas implementação Stub ativa
-builder.Services.AddSingleton<IMDFeProvider, StubMDFeProvider>();
+var mdfeProviderSetting = builder.Configuration.GetValue<string>("MDFe:Provider")?.ToLowerInvariant();
+if (mdfeProviderSetting == "stub")
+{
+    builder.Services.AddScoped<IMDFeProvider, StubMDFeProvider>();
+}
+else
+{
+    builder.Services.AddScoped<IMDFeProvider, AcbrLibMDFeProvider>();
+}
 
 builder.Services.AddScoped<IIBGEService, IBGEService>();
 
@@ -167,6 +175,7 @@ builder.Services.AddScoped<IIBGEService, IBGEService>();
 builder.Services.AddSingleton<IniParser>();
 builder.Services.AddSingleton<MdfeIniTemplateProvider>();
 builder.Services.AddSingleton<IMdfeIniValidator, MdfeIniValidator>();
+builder.Services.AddSingleton<IMDFeIniGenerator, MDFeIniGenerator>();
 
 // Register repositories
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
@@ -183,6 +192,7 @@ builder.Services.AddHttpClient();
 
 // Register export service (gera Excel/PDF para relatórios)
 builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<IMDFeBusinessService, MDFeBusinessService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
@@ -286,7 +296,8 @@ if (Directory.Exists(caminhoLogos))
     });
 }
 
-app.UseHttpsRedirection();
+// REMOVIDO temporariamente para desenvolvimento - Permitir HTTP para testes
+// app.UseHttpsRedirection(); // Reativar em produção
 
 app.UseResponseCompression();
 app.UseOutputCache();
@@ -311,8 +322,9 @@ else
     app.UseCors("Production");
 }
 
-app.UseAuthentication();
-app.UseAuthorization();
+// REMOVIDO temporariamente para desenvolvimento - Reativar em produção
+// app.UseAuthentication();
+// app.UseAuthorization();
 
 // Configure Health Check endpoints
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
@@ -366,9 +378,7 @@ if (app.Environment.IsDevelopment())
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SistemaContext>();
-    var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    var permissaoRepo = scope.ServiceProvider.GetService<IPermissaoRepository>();
 
     try
     {
@@ -389,14 +399,6 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
-        // Create master user automatically somente se variável habilitar
-        if (Environment.GetEnvironmentVariable("CREATE_MASTER_USER") == "1")
-        {
-            await CreateMasterUser(context, passwordHasher, logger);
-        }
-
-        // Sempre garantir que cargo Programador tenha TODAS as permissões existentes
-        await EnsureAllPermissionsForSuperUser(context, logger);
     }
     catch (Exception ex) when (ex.Message.Contains("multiple cascade paths") || ex.Message.Contains("cascade"))
     {
@@ -406,136 +408,6 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         logger.LogError(ex, "An error occurred while applying database migrations");
-    }
-}
-
-async Task CreateMasterUser(SistemaContext context, IPasswordHasher passwordHasher, ILogger logger)
-{
-    try
-    {
-        // Check if master user already exists
-        var existingUser = await context.Usuarios.Include(u => u.Cargo).FirstOrDefaultAsync(u => u.UserName == "programador");
-        if (existingUser != null)
-        {
-            // Se o usuário existe mas não tem cargo, vamos atualizar
-            if (existingUser.CargoId == null)
-            {
-                logger.LogInformation("Master user exists but missing cargo - updating...");
-
-                // Criar cargo Programador se não existir
-                var cargo = await context.Cargos.FirstOrDefaultAsync(c => c.Nome == "Programador");
-                if (cargo == null)
-                {
-                    cargo = new Cargo
-                    {
-                        Nome = "Programador",
-                        Descricao = "Desenvolvedor do sistema com acesso total",
-                        Ativo = true,
-                        DataCriacao = DateTime.UtcNow
-                    };
-                    context.Cargos.Add(cargo);
-                    await context.SaveChangesAsync();
-                    logger.LogInformation("Cargo 'Programador' created successfully");
-                }
-
-                // Atualizar usuário com cargo
-                existingUser.CargoId = cargo.Id;
-                await context.SaveChangesAsync();
-                logger.LogInformation("Master user updated with cargo 'Programador'");
-            }
-            else
-            {
-                logger.LogInformation("Master user already exists with cargo");
-            }
-            return;
-        }
-
-        // Criar cargo Programador se não existir
-        var programadorCargo = await context.Cargos.FirstOrDefaultAsync(c => c.Nome == "Programador");
-        if (programadorCargo == null)
-        {
-            programadorCargo = new Cargo
-            {
-                Nome = "Programador",
-                Descricao = "Desenvolvedor do sistema com acesso total",
-                Ativo = true,
-                DataCriacao = DateTime.UtcNow
-            };
-            context.Cargos.Add(programadorCargo);
-            await context.SaveChangesAsync();
-            logger.LogInformation("Cargo 'Programador' created successfully");
-        }
-
-        // Create master user with cargo
-        var masterUser = new Usuario
-        {
-            UserName = "programador",
-            Nome = "Programador",
-            CargoId = programadorCargo.Id,
-            Ativo = true,
-            DataCriacao = DateTime.UtcNow
-        };
-
-        var masterPassword = Environment.GetEnvironmentVariable("MASTER_USER_PASSWORD");
-        if (string.IsNullOrWhiteSpace(masterPassword))
-        {
-            masterPassword = Guid.NewGuid().ToString("N").Substring(0, 12) + "!"; // gera senha temporária
-            logger.LogWarning("MASTER_USER_PASSWORD não definida. Gerada senha temporária: {TempPassword}", masterPassword);
-        }
-
-        masterUser.PasswordHash = passwordHasher.HashPassword(masterPassword);
-
-        // Add user to database
-        context.Usuarios.Add(masterUser);
-        await context.SaveChangesAsync();
-
-        logger.LogInformation("Master user 'programador' created successfully with cargo 'Programador'");
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Error creating master user");
-    }
-}
-
-async Task EnsureAllPermissionsForSuperUser(SistemaContext context, ILogger logger)
-{
-    try
-    {
-        var cargoProgramador = await context.Cargos.FirstOrDefaultAsync(c => c.Nome == "Programador");
-        if (cargoProgramador == null)
-        {
-            logger.LogWarning("Cargo 'Programador' não encontrado ao sincronizar permissões");
-            return;
-        }
-
-        var allPermIds = await context.Permissoes.Select(p => p.Id).ToListAsync();
-        var existing = await context.CargoPermissoes
-            .Where(cp => cp.CargoId == cargoProgramador.Id)
-            .Select(cp => cp.PermissaoId)
-            .ToListAsync();
-
-        var missing = allPermIds.Except(existing).ToList();
-        if (missing.Count == 0)
-        {
-            logger.LogInformation("Cargo 'Programador' já possui todas as permissões ({Count})", existing.Count);
-            return;
-        }
-
-        foreach (var pid in missing)
-        {
-            context.CargoPermissoes.Add(new Backend.Api.Models.CargoPermissao
-            {
-                CargoId = cargoProgramador.Id,
-                PermissaoId = pid,
-                DataCriacao = DateTime.UtcNow
-            });
-        }
-        await context.SaveChangesAsync();
-        logger.LogInformation("Adicionadas {Added} novas permissões ao cargo 'Programador'. Total agora: {Total}", missing.Count, existing.Count + missing.Count);
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Falha ao garantir permissões para super usuário");
     }
 }
 

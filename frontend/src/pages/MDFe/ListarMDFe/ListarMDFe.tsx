@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Icon from '../../../components/UI/Icon';
+import { Icon } from '../../../ui';
 import Pagination from '../../../components/UI/navigation/Pagination';
 import { MDFeViewModal } from '../../../components/UI/feedback/MDFeViewModal';
 import { formatPlaca } from '../../../utils/formatters';

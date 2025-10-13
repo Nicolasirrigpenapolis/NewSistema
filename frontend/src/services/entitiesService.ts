@@ -1,5 +1,5 @@
-// FRONTEND: APENAS CHAMADAS SIMPLES PARA BACKEND
-// Transformações e mapeamentos movidos para o backend
+﻿// FRONTEND: APENAS CHAMADAS SIMPLES PARA BACKEND
+// Transforma+º+Áes e mapeamentos movidos para o backend
 
 import { RespostaAPI } from '../types/mdfe';
 import { EntityOption } from '../types/apiResponse';
@@ -7,7 +7,7 @@ import { EntityOption } from '../types/apiResponse';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:5001/api';
 
 class EntitiesService {
-  // Request simples - sem transformações
+  // Request simples - sem transforma+º+Áes
   private async request(
     endpoint: string,
     options: RequestInit = {}
@@ -39,28 +39,28 @@ class EntitiesService {
       }
 
       // Para respostas de sucesso (2xx)
-      // A estrutura da resposta da API agora é { success, message, data }
+      // A estrutura da resposta da API agora +® { success, message, data }
       if (responseData && typeof responseData.success === 'boolean') {
         if (responseData.success) {
           return {
             sucesso: true,
-            mensagem: responseData.message || 'Operação realizada com sucesso',
+            mensagem: responseData.message || 'Opera+º+úo realizada com sucesso',
             dados: responseData.data, // Retorna apenas o campo 'data'
           };
         } else {
           return {
             sucesso: false,
-            mensagem: responseData.message || 'A API indicou uma falha na operação',
+            mensagem: responseData.message || 'A API indicou uma falha na opera+º+úo',
             dados: responseData.errors, // Pode haver detalhes de erro
           };
         }
       }
 
-      // Fallback para respostas que não seguem o padrão { success, message, data }
-      // mas que ainda são 2xx. Ex: 204 No Content
+      // Fallback para respostas que n+úo seguem o padr+úo { success, message, data }
+      // mas que ainda s+úo 2xx. Ex: 204 No Content
       return {
         sucesso: true,
-        mensagem: 'Operação realizada com sucesso',
+        mensagem: 'Opera+º+úo realizada com sucesso',
         dados: responseData,
       };
 
@@ -68,7 +68,7 @@ class EntitiesService {
       console.error(`Erro na chamada da API para ${endpoint}:`, error);
       return {
         sucesso: false,
-        mensagem: 'Erro de conexão com o servidor. Verifique o console para mais detalhes.',
+        mensagem: 'Erro de conex+úo com o servidor. Verifique o console para mais detalhes.',
         codigoErro: 'NETWORK_ERROR',
       };
     }
@@ -97,7 +97,7 @@ class EntitiesService {
     return response.dados;
   }
 
-  // Métodos individuais simplificados
+  // M+®todos individuais simplificados
   async obterEmitentes(): Promise<EntityOption[]> {
     const response = await this.request('/entities/emitentes');
     return response.sucesso ? response.dados : [];
@@ -123,7 +123,7 @@ class EntitiesService {
     return response.sucesso ? response.dados : [];
   }
 
-  // Obter dados completos do emitente para auto-popular formulário
+  // Obter dados completos do emitente para auto-popular formul+írio
   async obterDadosEmitente(id: number): Promise<RespostaAPI> {
     return await this.request(`/entities/emitentes/${id}`);
   }
@@ -172,12 +172,16 @@ class EntitiesService {
     return await this.request(`/condutores/${id}`, { method: 'DELETE' });
   }
 
-  // Veículos
+  // Ve+¡culos
   async criarVeiculo(dados: any): Promise<RespostaAPI> {
     return await this.request('/veiculos', {
       method: 'POST',
       body: JSON.stringify(dados)
     });
+  }
+
+  async buscarVeiculoPorId(id: number): Promise<RespostaAPI> {
+    return await this.request(`/veiculos/${id}`);
   }
 
   async atualizarVeiculo(id: number, dados: any): Promise<RespostaAPI> {
@@ -192,6 +196,10 @@ class EntitiesService {
   }
 
   // Contratantes
+  async buscarContratantePorId(id: number): Promise<RespostaAPI> {
+    return await this.request(`/contratantes/${id}`);
+  }
+
   async criarContratante(dados: any): Promise<RespostaAPI> {
     return await this.request('/contratantes', {
       method: 'POST',
@@ -210,12 +218,39 @@ class EntitiesService {
     return await this.request(`/contratantes/${id}`, { method: 'DELETE' });
   }
 
+  // Municipios
+  async buscarMunicipioPorId(id: number): Promise<RespostaAPI> {
+    return await this.request(`/municipios/${id}`);
+  }
+
+  async criarMunicipio(dados: any): Promise<RespostaAPI> {
+    return await this.request('/municipios', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    });
+  }
+
+  async atualizarMunicipio(id: number, dados: any): Promise<RespostaAPI> {
+    return await this.request(`/municipios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(dados)
+    });
+  }
+
+  async excluirMunicipio(id: number): Promise<RespostaAPI> {
+    return await this.request(`/municipios/${id}`, { method: 'DELETE' });
+  }
+
   // Seguradoras
   async criarSeguradora(dados: any): Promise<RespostaAPI> {
     return await this.request('/seguradoras', {
       method: 'POST',
       body: JSON.stringify(dados)
     });
+  }
+
+  async buscarSeguradoraPorId(id: number): Promise<RespostaAPI> {
+    return await this.request(`/seguradoras/${id}`);
   }
 
   async atualizarSeguradora(id: number, dados: any): Promise<RespostaAPI> {
@@ -228,6 +263,35 @@ class EntitiesService {
   async excluirSeguradora(id: number): Promise<RespostaAPI> {
     return await this.request(`/seguradoras/${id}`, { method: 'DELETE' });
   }
+
+  // Condutores
+  async buscarCondutorPorId(id: number): Promise<RespostaAPI> {
+    return await this.request(`/condutores/${id}`);
+  }
+
+  // Reboques
+  async buscarReboquePorId(id: number): Promise<RespostaAPI> {
+    return await this.request(`/reboques/${id}`);
+  }
+
+  async criarReboque(dados: any): Promise<RespostaAPI> {
+    return await this.request('/reboques', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    });
+  }
+
+  async atualizarReboque(id: number, dados: any): Promise<RespostaAPI> {
+    return await this.request(`/reboques/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(dados)
+    });
+  }
+
+  async excluirReboque(id: number): Promise<RespostaAPI> {
+    return await this.request(`/reboques/${id}`, { method: 'DELETE' });
+  }
 }
 
 export const entitiesService = new EntitiesService();
+

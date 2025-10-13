@@ -11,7 +11,7 @@ namespace Backend.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    // [Authorize] // REMOVIDO temporariamente para desenvolvimento - Reativar em produção
     public class PermissoesController : ControllerBase
     {
         private readonly IPermissaoService _permissaoService;

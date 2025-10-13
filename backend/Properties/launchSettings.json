@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "MDFeApi": {
+    "Backend.Api": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {

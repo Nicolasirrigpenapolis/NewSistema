@@ -36,6 +36,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Em desenvolvimento, simular usuário logado automaticamente
+        const isDevelopment = process.env.NODE_ENV === 'development';
+
+        if (isDevelopment) {
+          // Simular usuário padrão para desenvolvimento
+          const mockUser: UserInfo = {
+            id: 1,
+            nome: 'Usuário Desenvolvimento',
+            username: 'programador',
+            cargoId: 1,
+            cargoNome: 'Administrador'
+          };
+
+          setIsAuthenticated(true);
+          setUser(mockUser);
+          setToken('mock-dev-token');
+          updateTokenInfo();
+          setLoading(false);
+          return;
+        }
+
         const authenticated = authService.isAuthenticated();
         const currentUser = authService.getCurrentUser();
         const currentToken = authService.getToken();
@@ -214,8 +235,11 @@ export function useRequireAuth() {
   const auth = useAuth();
 
   useEffect(() => {
-    if (!auth.loading && !auth.isAuthenticated) {
-      // Redirecionar para login se não estiver autenticado
+    // Em desenvolvimento, não redirecionar para login
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
+    if (!isDevelopment && !auth.loading && !auth.isAuthenticated) {
+      // Redirecionar para login apenas em produção
       window.location.href = '/login';
     }
   }, [auth.loading, auth.isAuthenticated]);

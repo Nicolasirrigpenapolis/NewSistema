@@ -111,7 +111,7 @@ export function ReboqueCRUD({
           : ''
         }
         onConfirm={onDelete}
-        onCancel={onDeleteClose}
+        onClose={onDeleteClose}
         loading={deleting}
       />
     </>

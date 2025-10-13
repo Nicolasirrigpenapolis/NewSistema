@@ -4,70 +4,101 @@ interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  totalItems?: number;
+  itemsPerPage?: number;
 }
 
-const Pagination: React.FC<PaginationProps> = ({
+export default function Pagination({
   currentPage,
   totalPages,
   onPageChange,
-}) => {
-  const pageNumbers = [];
-  for (let i = 1; i <= totalPages; i++) {
-    pageNumbers.push(i);
+  totalItems,
+  itemsPerPage
+}: PaginationProps) {
+  const pages = [];
+  const maxVisible = 5;
+
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+  if (endPage - startPage + 1 < maxVisible) {
+    startPage = Math.max(1, endPage - maxVisible + 1);
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i);
   }
 
   return (
-    <nav className="flex justify-center">
-      <ul className="flex items-center space-x-1">
-        <li>
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className={`
-              px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
-              ${currentPage === 1
-                ? 'text-gray-400 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-                : 'text-foreground bg-card dark:bg-gray-700 border border-gray-300 dark:border-0 hover:bg-background dark:hover:bg-gray-600'
-              }
-            `}
-          >
-            Anterior
-          </button>
-        </li>
-        {pageNumbers.map((number) => (
-          <li key={number}>
-            <button
-              onClick={() => onPageChange(number)}
-              className={`
-                px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
-                ${number === currentPage
-                  ? 'bg-blue-600 text-white border border-blue-600'
-                  : 'text-foreground bg-card dark:bg-gray-700 border border-gray-300 dark:border-0 hover:bg-background dark:hover:bg-gray-600'
-                }
-              `}
-            >
-              {number}
-            </button>
-          </li>
-        ))}
-        <li>
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className={`
-              px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
-              ${currentPage === totalPages
-                ? 'text-gray-400 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-                : 'text-foreground bg-card dark:bg-gray-700 border border-gray-300 dark:border-0 hover:bg-background dark:hover:bg-gray-600'
-              }
-            `}
-          >
-            Próximo
-          </button>
-        </li>
-      </ul>
-    </nav>
-  );
-};
+    <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+      {totalItems && itemsPerPage && (
+        <div className="text-sm text-muted-foreground">
+          Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} a{' '}
+          {Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} resultados
+        </div>
+      )}
 
-export default Pagination;
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-3 py-2 text-sm font-medium text-foreground bg-background border border-input rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Anterior
+        </button>
+
+        <div className="flex gap-1">
+          {startPage > 1 && (
+            <>
+              <button
+                onClick={() => onPageChange(1)}
+                className="px-3 py-2 text-sm font-medium text-foreground bg-background border border-input rounded-lg hover:bg-accent transition-colors"
+              >
+                1
+              </button>
+              {startPage > 2 && (
+                <span className="px-2 py-2 text-muted-foreground">...</span>
+              )}
+            </>
+          )}
+
+          {pages.map(page => (
+            <button
+              key={page}
+              onClick={() => onPageChange(page)}
+              className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                page === currentPage
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-foreground bg-background border border-input hover:bg-accent'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && (
+                <span className="px-2 py-2 text-muted-foreground">...</span>
+              )}
+              <button
+                onClick={() => onPageChange(totalPages)}
+                className="px-3 py-2 text-sm font-medium text-foreground bg-background border border-input rounded-lg hover:bg-accent transition-colors"
+              >
+                {totalPages}
+              </button>
+            </>
+          )}
+        </div>
+
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="px-3 py-2 text-sm font-medium text-foreground bg-background border border-input rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Próxima
+        </button>
+      </div>
+    </div>
+  );
+}

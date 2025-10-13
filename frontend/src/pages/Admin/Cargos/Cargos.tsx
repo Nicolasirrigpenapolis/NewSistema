@@ -5,7 +5,7 @@ import { cargosService, Cargo } from '../../../services/cargosService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ModernPermissionModal } from '../../../components/Admin/ModernPermissionModal';
 import { cargoConfig, CargoFormData } from '../../../components/Admin/CargoConfig';
-import Icon from '../../../components/UI/Icon';
+import { Icon } from '../../../ui';
 
 export function Cargos() {
   const { user } = useAuth();
@@ -363,7 +363,7 @@ export function Cargos() {
         message="Tem certeza de que deseja excluir este cargo?"
         itemName={cargoExclusao ? cargoExclusao.nome : ''}
         onConfirm={confirmarExclusao}
-        onCancel={fecharModalExclusao}
+        onClose={fecharModalExclusao}
         loading={excludindo}
       />
 

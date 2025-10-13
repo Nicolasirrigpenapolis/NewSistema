@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../../contexts/AuthContext';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../../../services/authService';
 import { cargosService, Cargo } from '../../../services/cargosService';
-import { UsuarioCRUD } from '../../../components/Usuarios/UsuarioCRUD';
-import Icon from '../../../components/UI/Icon';
+import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
+import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
+import { createUsuarioConfigWithCargos } from '../../../components/Usuarios/UsuarioConfigWithCargos';
+import { Icon } from '../../../ui';
 
 interface User {
   id: number;
@@ -18,7 +20,7 @@ interface User {
 }
 
 export function Usuarios() {
-  const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,12 +37,15 @@ export function Usuarios() {
 
   // Estados dos modais CRUD
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [formModalOpen, setFormModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isEdit, setIsEdit] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const usuarioConfig = useMemo(() => {
+    const cargosOptions = cargos
+      .filter(c => c.ativo)
+      .map(c => ({ value: c.id, label: c.nome }));
+    return createUsuarioConfigWithCargos(cargosOptions);
+  }, [cargos]);
 
   useEffect(() => {
     loadData();
@@ -68,72 +73,33 @@ export function Usuarios() {
     }
   };
 
-  const abrirModalNovo = () => {
-    setSelectedUser(null);
-    setIsEdit(false);
-    setFormModalOpen(true);
+  const abrirNovo = () => {
+    navigate('/admin/usuarios/novo');
   };
 
-  const abrirModalEdicao = (user: User) => {
-    setSelectedUser(user);
-    setIsEdit(true);
-    setFormModalOpen(true);
+  const abrirEdicao = (user: User) => {
+    navigate(`/admin/usuarios/${user.id}/editar`, { state: { user } });
   };
 
-  const abrirModalVisualizacao = (user: User) => {
+  const abrirVisualizacao = (user: User) => {
     setSelectedUser(user);
     setViewModalOpen(true);
   };
 
-  const abrirModalExclusao = (user: User) => {
+  const abrirExclusao = (user: User) => {
     setSelectedUser(user);
     setDeleteModalOpen(true);
   };
 
-  const fecharModais = () => {
+  const fecharModalVisualizacao = () => {
     setViewModalOpen(false);
-    setFormModalOpen(false);
-    setDeleteModalOpen(false);
     setSelectedUser(null);
-    setIsEdit(false);
-    setSaving(false);
-    setDeleting(false);
   };
 
-  const salvarUsuario = async (data: User) => {
-    try {
-      setSaving(true);
-
-      if (isEdit && data.id) {
-        // Editar usuário existente
-        console.log('Editando usuário:', data.id, data);
-        // TODO: Implementar API de edição quando estiver disponível
-        setUsers(prev => prev.map(user =>
-          user.id === data.id ? { ...user, ...data } : user
-        ));
-      } else {
-        // Criar novo usuário
-        const result = await authService.register({
-          nome: data.nome,
-          username: data.username,
-          password: data.password || '',
-          cargoId: data.cargoId
-        });
-
-        if (result.sucesso) {
-          await loadData();
-        } else {
-          throw new Error(result.mensagem || 'Erro ao criar usuário');
-        }
-      }
-
-      fecharModais();
-    } catch (error) {
-      console.error('Erro ao salvar usuário:', error);
-      throw error;
-    } finally {
-      setSaving(false);
-    }
+  const fecharModalExclusao = () => {
+    setDeleteModalOpen(false);
+    setSelectedUser(null);
+    setDeleting(false);
   };
 
   const excluirUsuario = async () => {
@@ -144,18 +110,13 @@ export function Usuarios() {
       // TODO: Implementar API de exclusão quando estiver disponível
       console.log('Excluindo usuário:', selectedUser.id);
       setUsers(prev => prev.filter(user => user.id !== selectedUser.id));
-      fecharModais();
+      fecharModalExclusao();
     } catch (error) {
       console.error('Erro ao excluir usuário:', error);
       throw error;
     } finally {
       setDeleting(false);
     }
-  };
-
-  const editarDoModal = (user: User) => {
-    setViewModalOpen(false);
-    abrirModalEdicao(user);
   };
 
   const limparFiltros = () => {
@@ -202,7 +163,7 @@ export function Usuarios() {
             </div>
           </div>
           <button
-            onClick={abrirModalNovo}
+            onClick={abrirNovo}
             className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <i className="fas fa-plus text-lg"></i>
@@ -338,21 +299,21 @@ export function Usuarios() {
                   </div>
                   <div className="text-center flex justify-center gap-2">
                     <button
-                      onClick={() => abrirModalVisualizacao(user)}
+                      onClick={() => abrirVisualizacao(user)}
                       className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200"
                       title="Visualizar"
                     >
                       <Icon name="eye" size="sm" />
                     </button>
                     <button
-                      onClick={() => abrirModalEdicao(user)}
+                      onClick={() => abrirEdicao(user)}
                       className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
                       title="Editar"
                     >
                       <Icon name="edit" size="sm" />
                     </button>
                     <button
-                      onClick={() => abrirModalExclusao(user)}
+                      onClick={() => abrirExclusao(user)}
                       className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200"
                       title="Excluir"
                     >
@@ -365,22 +326,36 @@ export function Usuarios() {
           )}
         </div>
 
-        {/* Componente de CRUD de Usuários */}
-        <UsuarioCRUD
-          viewModalOpen={viewModalOpen}
-          formModalOpen={formModalOpen}
-          deleteModalOpen={deleteModalOpen}
-          selectedUsuario={selectedUser}
-          isEdit={isEdit}
-          cargos={cargos}
-          onViewClose={() => setViewModalOpen(false)}
-          onFormClose={() => setFormModalOpen(false)}
-          onDeleteClose={() => setDeleteModalOpen(false)}
-          onSave={salvarUsuario}
-          onEdit={editarDoModal}
-          onDelete={excluirUsuario}
-          saving={saving}
-          deleting={deleting}
+        {/* Modal de visualização */}
+        <GenericViewModal
+          isOpen={viewModalOpen}
+          onClose={fecharModalVisualizacao}
+          item={selectedUser}
+          title={usuarioConfig.view.title}
+          subtitle={usuarioConfig.view.subtitle}
+          headerIcon={usuarioConfig.view.headerIcon}
+          headerColor={usuarioConfig.view.headerColor}
+          sections={selectedUser ? usuarioConfig.view.getSections(selectedUser) : []}
+          actions={selectedUser ? [{
+            label: 'Editar',
+            icon: 'edit',
+            variant: 'warning' as const,
+            onClick: () => {
+              fecharModalVisualizacao();
+              abrirEdicao(selectedUser);
+            }
+          }] : []}
+        />
+
+        {/* Modal de exclusão */}
+        <ConfirmDeleteModal
+          isOpen={deleteModalOpen}
+          onClose={fecharModalExclusao}
+          onConfirm={excluirUsuario}
+          title="Excluir Usuário"
+          message={selectedUser ? `Tem certeza que deseja excluir o usuário "${selectedUser.nome}"?` : 'Tem certeza que deseja excluir este usuário?'}
+          itemName={selectedUser?.nome || 'usuário'}
+          loading={deleting}
         />
       </div>
     </div>

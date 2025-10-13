@@ -17,15 +17,22 @@ public class MDFeService : IMDFeService
 {
     private readonly SistemaContext _context;
     private readonly ILogger<MDFeService> _logger;
-    private readonly IMDFeProvider _provider; // injetado
-    private readonly IMDFeIniGenerator? _iniGenerator; // opcional se registrado
+    private readonly IMDFeProvider _provider;
+    private readonly IMDFeIniGenerator _iniGenerator;
+    private readonly IMdfeIniValidator _iniValidator;
 
-    public MDFeService(SistemaContext context, ILogger<MDFeService> logger, IMDFeProvider provider, IMDFeIniGenerator? iniGenerator = null)
+    public MDFeService(
+        SistemaContext context,
+        ILogger<MDFeService> logger,
+        IMDFeProvider provider,
+        IMDFeIniGenerator iniGenerator,
+        IMdfeIniValidator iniValidator)
     {
         _context = context;
         _logger = logger;
         _provider = provider;
         _iniGenerator = iniGenerator;
+        _iniValidator = iniValidator;
     }
 
     public async Task<MDFe> CreateAsync(MDFe mdfe)
@@ -76,57 +83,37 @@ public class MDFeService : IMDFeService
 
     public async Task<string> GerarXmlAsync(int mdfeId)
     {
-        var mdfe = await GetByIdAsync(mdfeId) ?? throw new KeyNotFoundException("MDFe não encontrado");
-        if (_iniGenerator != null)
-        {
-            // Temporariamente retornamos o INI gerado até termos geração XML própria
-            var ini = await _iniGenerator.GerarIniAsync(mdfe);
-            return $";RETORNO_TEMPORARIO=INI\n{ini}";
-        }
         var result = await _provider.GerarXmlAsync(mdfeId);
-        if (!result.Sucesso)
+        if (result.Sucesso && !string.IsNullOrWhiteSpace(result.Dados))
         {
-            _logger.LogWarning("[MDFeService] Falha ao gerar XML via provider: {Codigo} {Mensagem}", result.CodigoErro, result.Mensagem);
-            return "<!-- Geração XML não implementada -->";
+            return result.Dados!;
         }
-        return result.Dados ?? "";
+
+        if (!result.Sucesso && result.CodigoErro != ProviderErrorCode.NaoEncontrado)
+        {
+            throw new InvalidOperationException(result.Mensagem ?? "Falha ao obter XML autorizado do MDFe.");
+        }
+
+        var mdfe = await GetByIdAsync(mdfeId) ?? throw new KeyNotFoundException("MDFe não encontrado");
+        var ini = await _iniGenerator.GerarIniAsync(mdfe);
+        _logger.LogInformation("[MDFeService] XML autorizado indisponível para MDFe {Id}; retornando INI gerado para conferência.", mdfeId);
+        return ini;
     }
 
     public async Task<object> TransmitirAsync(int mdfeId)
     {
         var mdfe = await GetByIdAsync(mdfeId) ?? throw new KeyNotFoundException("MDFe não encontrado");
-        if (_iniGenerator == null)
-        {
-            _logger.LogWarning("[MDFeService] IMDFeIniGenerator não registrado - fallback para transmissão stub XML");
-            var fallback = await _provider.TransmitirAsync(mdfeId);
-            if (!fallback.Sucesso) throw new InvalidOperationException($"Falha transmitir (fallback): {fallback.Mensagem}");
-            return fallback.Dados!;
-        }
 
-        // Gera INI real
         var ini = await _iniGenerator.GerarIniAsync(mdfe);
         _logger.LogDebug("[MDFeService] INI gerado {Length} chars", ini.Length);
+
         var resultado = await _provider.TransmitirComIniAsync(mdfeId, ini);
-        if (!resultado.Sucesso) throw new InvalidOperationException($"Falha transmitir: {resultado.Mensagem}");
-        var meta = resultado.Dados as Dictionary<string, object?>;
-        if (meta != null)
+        if (!resultado.Sucesso)
         {
-            // Persistir campos chave se retornarem
-            if (meta.TryGetValue("nProt", out var nProt) && nProt is string prot && !string.IsNullOrWhiteSpace(prot))
-            {
-                mdfe.Protocolo = prot;
-            }
-            if (meta.TryGetValue("nRec", out var nRec) && nRec is string rec && !string.IsNullOrWhiteSpace(rec))
-            {
-                mdfe.NumeroRecibo = rec;
-            }
-            if (meta.TryGetValue("cStat", out var cStat) && cStat is string cs)
-            {
-                mdfe.StatusSefaz = cs;
-            }
-            await _context.SaveChangesAsync();
+            throw new InvalidOperationException(resultado.Mensagem ?? "Falha ao transmitir MDFe.");
         }
-        return resultado.Dados!;
+
+        return resultado.Dados ?? new { sucesso = true };
     }
 
     public async Task<object> ConsultarProtocoloAsync(int mdfeId, string protocolo)
@@ -197,18 +184,87 @@ public class MDFeService : IMDFeService
     }
     public IniComparisonResult CompararIniComModelo(string iniConteudo)
     {
-        return new IniComparisonResult(); // sempre não correspondente por enquanto
+        if (string.IsNullOrWhiteSpace(iniConteudo))
+        {
+            throw new ArgumentException("Conteúdo INI não informado", nameof(iniConteudo));
+        }
+
+        return _iniValidator.CompareWithTemplate(iniConteudo);
     }
-    public Task<string> GerarINIAsync(MDFeGerarINIDto dados) => Task.FromResult("; INI indisponível\n");
+    public async Task<string> GerarINIAsync(MDFeGerarINIDto dados)
+    {
+        if (dados is null)
+        {
+            throw new ArgumentNullException(nameof(dados));
+        }
+
+        if (dados.Id <= 0)
+        {
+            throw new InvalidOperationException("Informe o identificador do MDFe salvo para gerar o INI.");
+        }
+
+        var mdfe = await _context.MDFes
+            .Include(m => m.Emitente)
+            .Include(m => m.Condutor)
+            .Include(m => m.CondutoresAdicionais)
+            .Include(m => m.Veiculo)
+            .Include(m => m.Contratante)
+            .Include(m => m.Seguradora)
+            .Include(m => m.Reboques).ThenInclude(r => r.Reboque)
+            .Include(m => m.LocaisCarregamento).ThenInclude(l => l.Municipio)
+            .Include(m => m.LocaisDescarregamento).ThenInclude(l => l.Municipio)
+            .Include(m => m.UfsPercurso)
+            .Include(m => m.LacresRodoviarios)
+            .Include(m => m.ValesPedagio)
+            .Include(m => m.DocumentosNfe)
+            .Include(m => m.DocumentosCte)
+            .Include(m => m.DocumentosMdfeTransp)
+            .Include(m => m.AutorizacoesXml)
+            .Include(m => m.ResponsavelTecnico)
+            .Include(m => m.UnidadesTransporte).ThenInclude(ut => ut.Lacres)
+            .Include(m => m.UnidadesTransporte).ThenInclude(ut => ut.UnidadesCarga).ThenInclude(uc => uc.LacresUnidadeCarga)
+            .Include(m => m.UnidadesCarga).ThenInclude(uc => uc.LacresUnidadeCarga)
+            .Include(m => m.Pagamentos).ThenInclude(p => p.Componentes)
+            .Include(m => m.Pagamentos).ThenInclude(p => p.Prazos)
+            .Include(m => m.Pagamentos).ThenInclude(p => p.DadosBancarios)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(m => m.Id == dados.Id)
+            ?? throw new KeyNotFoundException("MDFe não encontrado");
+
+        return await _iniGenerator.GerarIniAsync(mdfe);
+    }
     public Task<object> ObterStatusServicoAsync() => ConsultarStatusServicoAsync("");
 
-    // Métodos de distribuição não implementados
-    public Task<object> DistribuicaoPorNSUAsync(string uf, string cnpjCpf, string nsu)
-        => Task.FromResult<object>(new { sucesso = false, mensagem = "Distribuição por NSU não implementada", nsu });
+    public async Task<object> DistribuicaoPorNSUAsync(string uf, string cnpjCpf, string nsu)
+    {
+        var resultado = await _provider.DistribuicaoPorNSUAsync(uf, cnpjCpf, nsu);
+        if (!resultado.Sucesso)
+        {
+            throw new InvalidOperationException(resultado.Mensagem ?? "Falha na distribuição por NSU.");
+        }
 
-    public Task<object> DistribuicaoPorUltNSUAsync(string uf, string cnpjCpf, string ultNsu)
-        => Task.FromResult<object>(new { sucesso = false, mensagem = "Distribuição por último NSU não implementada", ultNsu });
+        return resultado.Dados!;
+    }
 
-    public Task<object> DistribuicaoPorChaveAsync(string uf, string cnpjCpf, string chave)
-        => Task.FromResult<object>(new { sucesso = false, mensagem = "Distribuição por chave não implementada", chave });
+    public async Task<object> DistribuicaoPorUltNSUAsync(string uf, string cnpjCpf, string ultNsu)
+    {
+        var resultado = await _provider.DistribuicaoPorUltNSUAsync(uf, cnpjCpf, ultNsu);
+        if (!resultado.Sucesso)
+        {
+            throw new InvalidOperationException(resultado.Mensagem ?? "Falha na distribuição por último NSU.");
+        }
+
+        return resultado.Dados!;
+    }
+
+    public async Task<object> DistribuicaoPorChaveAsync(string uf, string cnpjCpf, string chave)
+    {
+        var resultado = await _provider.DistribuicaoPorChaveAsync(uf, cnpjCpf, chave);
+        if (!resultado.Sucesso)
+        {
+            throw new InvalidOperationException(resultado.Mensagem ?? "Falha na distribuição por chave.");
+        }
+
+        return resultado.Dados!;
+    }
 }

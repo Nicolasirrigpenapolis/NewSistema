@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState, useRef } from 'react';
-import Icon from '../../../components/UI/Icon';
+import { Icon } from '../../../ui';
 import { emitenteConfig } from '../../../components/Emitentes/EmitenteConfig';
 import { GenericFormModal } from '../../../components/UI/feedback/GenericFormModal';
 import { empresaService } from '../../../services/empresaService';

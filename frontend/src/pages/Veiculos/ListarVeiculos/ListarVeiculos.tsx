@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { VeiculoCRUD } from '../../../components/Veiculos/VeiculoCRUD';
+import { useNavigate } from 'react-router-dom';
 import { entitiesService } from '../../../services/entitiesService';
 import Icon from '../../../components/UI/Icon';
-
+import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
+import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
+import { veiculoConfig } from '../../../components/Veiculos/VeiculoConfig';
 import { formatPlaca } from '../../../utils/formatters';
 interface Veiculo {
   id?: number;
@@ -27,6 +29,7 @@ interface PaginationData {
 }
 
 export function ListarVeiculos() {
+  const navigate = useNavigate();
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [carregando, setCarregando] = useState(false);
 
@@ -62,13 +65,10 @@ export function ListarVeiculos() {
 
   // Estados dos modais CRUD
   const [modalVisualizacao, setModalVisualizacao] = useState(false);
-  const [modalFormulario, setModalFormulario] = useState(false);
   const [modalExclusao, setModalExclusao] = useState(false);
   const [veiculoAtual, setVeiculoAtual] = useState<Veiculo | null>(null);
-  const [modoEdicao, setModoEdicao] = useState(false);
 
   // Estados de loading
-  const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
 
   useEffect(() => {
@@ -136,17 +136,15 @@ export function ListarVeiculos() {
     }
   };
 
-  // Handlers dos modais
-  const abrirModalNovo = () => {
-    setVeiculoAtual(null);
-    setModoEdicao(false);
-    setModalFormulario(true);
-  };
+  // Handlers para navegação para formulários de página
+  const abrirNovo = () => navigate('/veiculos/novo');
 
-  const abrirModalEdicao = (veiculo: Veiculo) => {
-    setVeiculoAtual(veiculo);
-    setModoEdicao(true);
-    setModalFormulario(true);
+  const abrirEdicao = (veiculo: Veiculo) => {
+    if (veiculo.id) {
+      navigate(`/veiculos/${veiculo.id}/editar`, { state: { veiculo } });
+    } else {
+      navigate('/veiculos/novo', { state: { veiculo } });
+    }
   };
 
   const abrirModalVisualizacao = (veiculo: Veiculo) => {
@@ -161,45 +159,9 @@ export function ListarVeiculos() {
 
   const fecharModais = () => {
     setModalVisualizacao(false);
-    setModalFormulario(false);
     setModalExclusao(false);
     setVeiculoAtual(null);
-    setModoEdicao(false);
   };
-
-  // Handlers de CRUD
-  const handleSave = async (dadosVeiculo: Veiculo) => {
-    try {
-      setSalvando(true);
-
-      const dadosLimpos = {
-        ...dadosVeiculo,
-        placa: dadosVeiculo.placa.trim().toUpperCase(),
-        marca: dadosVeiculo.marca?.trim(),
-        uf: dadosVeiculo.uf.toUpperCase()
-      };
-
-      let resposta;
-      if (modoEdicao && veiculoAtual?.id) {
-        resposta = await entitiesService.atualizarVeiculo(veiculoAtual.id, dadosLimpos);
-      } else {
-        resposta = await entitiesService.criarVeiculo(dadosLimpos);
-      }
-
-      if (resposta.sucesso) {
-        fecharModais();
-        carregarVeiculos();
-      } else {
-        throw new Error(resposta.mensagem || 'Erro ao salvar veículo');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar veículo:', error);
-      throw error; // Re-throw para que o modal possa mostrar o erro
-    } finally {
-      setSalvando(false);
-    }
-  };
-
   const handleDelete = async () => {
     if (!veiculoAtual?.id) return;
 
@@ -272,7 +234,7 @@ export function ListarVeiculos() {
           </div>
           <button
             className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-            onClick={abrirModalNovo}
+            onClick={abrirNovo}
           >
             <Icon name="plus" size="lg" />
             <span>Novo Veículo</span>
@@ -462,7 +424,7 @@ export function ListarVeiculos() {
                     </button>
                     <button
                       className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
-                      onClick={() => abrirModalEdicao(veiculo)}
+                      onClick={() => abrirEdicao(veiculo)}
                       title="Editar"
                     >
                       <Icon name="edit" />
@@ -533,21 +495,44 @@ export function ListarVeiculos() {
           </div>
         )}
 
-        {/* Modais CRUD */}
-        <VeiculoCRUD
-          viewModalOpen={modalVisualizacao}
-          formModalOpen={modalFormulario}
-          deleteModalOpen={modalExclusao}
-          selectedVeiculo={veiculoAtual}
-          isEdit={modoEdicao}
-          onViewClose={fecharModais}
-          onFormClose={fecharModais}
-          onDeleteClose={fecharModais}
-          onSave={handleSave}
-          onEdit={abrirModalEdicao}
-          onDelete={handleDelete}
-          saving={salvando}
-          deleting={excluindo}
+        {/* Modal de visualização */}
+        <GenericViewModal
+          isOpen={modalVisualizacao}
+          onClose={fecharModais}
+          item={veiculoAtual}
+          title={veiculoConfig.view.title}
+          subtitle={veiculoConfig.view.subtitle}
+          headerIcon={veiculoConfig.view.headerIcon}
+          headerColor={veiculoConfig.view.headerColor}
+          sections={veiculoAtual ? veiculoConfig.view.getSections(veiculoAtual) : []}
+          actions={
+            veiculoAtual
+              ? [
+                  {
+                    label: 'Editar Veículo',
+                    icon: 'edit',
+                    variant: 'warning' as const,
+                    onClick: () => {
+                      fecharModais();
+                      abrirEdicao(veiculoAtual);
+                    }
+                  }
+                ]
+              : []
+          }
+          statusConfig={veiculoAtual ? veiculoConfig.view.getStatusConfig?.(veiculoAtual) : undefined}
+          idField={veiculoConfig.view.idField}
+        />
+
+        {/* Modal de exclusão */}
+        <ConfirmDeleteModal
+          isOpen={modalExclusao}
+          title="Excluir Veículo"
+          message="Tem certeza de que deseja excluir este veículo?"
+          itemName={veiculoAtual ? formatPlaca(veiculoAtual.placa) : ''}
+          onConfirm={handleDelete}
+          onClose={fecharModais}
+          loading={excluindo}
         />
       </div>
     </div>

@@ -1,9 +1,11 @@
-﻿import React, { useState, useEffect } from 'react';
-import { EmitenteCRUD } from '../../../components/Emitentes/EmitenteCRUD';
-import { useCNPJLookup } from '../../../hooks/useCNPJLookup';
-import { formatCNPJ, formatCPF, cleanNumericString, applyMask } from '../../../utils/formatters';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { formatCNPJ, formatCPF } from '../../../utils/formatters';
 import { entitiesService } from '../../../services/entitiesService';
 import Icon from '../../../components/UI/Icon';
+import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
+import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
+import { emitenteConfig } from '../../../components/Emitentes/EmitenteConfig';
 
 interface Emitente {
   id?: number;
@@ -43,7 +45,7 @@ export function ListarEmitentes() {
   const [emitentes, setEmitentes] = useState<Emitente[]>([]);
   const [carregando, setCarregando] = useState(false);
 
-  // Estados temporÃ¡rios dos filtros (antes de aplicar)
+  // Estados temporÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡rios dos filtros (antes de aplicar)
   const [filtroTemp, setFiltroTemp] = useState('');
   const [filtroTipoTemp, setFiltroTipoTemp] = useState('');
   const [filtroStatusTemp, setFiltroStatusTemp] = useState('');
@@ -55,25 +57,19 @@ export function ListarEmitentes() {
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroUf, setFiltroUf] = useState('');
 
-  // Estados para paginaÃ§Ã£o
+  // Estados para paginaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [tamanhoPagina, setTamanhoPagina] = useState(10);
   const [paginacao, setPaginacao] = useState<PaginationData | null>(null);
 
   // Estados dos modais CRUD
   const [modalVisualizacao, setModalVisualizacao] = useState(false);
-  const [modalFormulario, setModalFormulario] = useState(false);
   const [modalExclusao, setModalExclusao] = useState(false);
   const [emitenteAtual, setEmitenteAtual] = useState<Emitente | null>(null);
-  const [modoEdicao, setModoEdicao] = useState(false);
+  const navigate = useNavigate();
 
   // Estados de loading
-  const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
-
-  // Hook para consulta automÃ¡tica de CNPJ
-  const { consultarCNPJ, loading: loadingCNPJ, error: errorCNPJ, clearError } = useCNPJLookup();
-
   useEffect(() => {
     carregarEmitentes(paginaAtual, filtro, filtroTipo, filtroStatus, filtroUf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,33 +135,21 @@ export function ListarEmitentes() {
     }
   };
 
-  // Handlers dos modais
-  const abrirModalNovo = () => {
-    setEmitenteAtual(null);
-    setModoEdicao(false);
-    setModalFormulario(true);
+  // AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes auxiliares
+  const abrirNovo = () => {
+    navigate('/emitentes/novo');
   };
 
-  const abrirModalEdicao = async (emitente: Emitente) => {
-    try {
-      // Buscar detalhes completos do emitente para ediÃ§Ã£o
-      const resposta = await entitiesService.buscarEmitentePorId(emitente.id!);
-      if (resposta.sucesso && resposta.dados) {
-        setEmitenteAtual(resposta.dados);
-      } else {
-        setEmitenteAtual(emitente);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar detalhes do emitente:', error);
-      setEmitenteAtual(emitente);
+  const abrirEdicao = (emitente: Emitente) => {
+    if (emitente.id) {
+      navigate(`/emitentes/${emitente.id}/editar`, { state: { emitente } });
+    } else {
+      navigate('/emitentes/novo');
     }
-    setModoEdicao(true);
-    setModalFormulario(true);
   };
 
-  const abrirModalVisualizacao = async (emitente: Emitente) => {
+  const abrirVisualizacao = async (emitente: Emitente) => {
     try {
-      // Buscar detalhes completos do emitente
       const resposta = await entitiesService.buscarEmitentePorId(emitente.id!);
       if (resposta.sucesso && resposta.dados) {
         setEmitenteAtual(resposta.dados);
@@ -179,61 +163,16 @@ export function ListarEmitentes() {
     setModalVisualizacao(true);
   };
 
-  const abrirModalExclusao = (emitente: Emitente) => {
+  const abrirExclusao = (emitente: Emitente) => {
     setEmitenteAtual(emitente);
     setModalExclusao(true);
   };
 
   const fecharModais = () => {
     setModalVisualizacao(false);
-    setModalFormulario(false);
     setModalExclusao(false);
     setEmitenteAtual(null);
-    setModoEdicao(false);
-    clearError();
   };
-
-  // Handlers de CRUD
-  const handleSave = async (dadosEmitente: Emitente) => {
-    try {
-      setSalvando(true);
-
-      const dadosLimpos = {
-        ...dadosEmitente,
-        cnpj: dadosEmitente.cnpj ? cleanNumericString(dadosEmitente.cnpj) : undefined,
-        cpf: dadosEmitente.cpf ? cleanNumericString(dadosEmitente.cpf) : undefined,
-        cep: cleanNumericString(dadosEmitente.cep),
-        razaoSocial: dadosEmitente.razaoSocial.trim(),
-        nomeFantasia: dadosEmitente.nomeFantasia ? dadosEmitente.nomeFantasia.trim() : undefined,
-        endereco: dadosEmitente.endereco.trim(),
-        bairro: dadosEmitente.bairro.trim(),
-        municipio: dadosEmitente.municipio.trim(),
-        uf: dadosEmitente.uf.toUpperCase(),
-        rntrc: dadosEmitente.rntrc?.trim() || undefined,
-        caminhoSalvarXml: dadosEmitente.caminhoSalvarXml?.trim() || undefined
-      };
-
-      let resposta;
-      if (modoEdicao && emitenteAtual?.id) {
-        resposta = await entitiesService.atualizarEmitente(emitenteAtual.id, dadosLimpos);
-      } else {
-        resposta = await entitiesService.criarEmitente(dadosLimpos);
-      }
-
-      if (resposta.sucesso) {
-        fecharModais();
-        carregarEmitentes();
-      } else {
-        throw new Error(resposta.mensagem || 'Erro ao salvar emitente');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar emitente:', error);
-      throw error; // Re-throw para que o modal possa mostrar o erro
-    } finally {
-      setSalvando(false);
-    }
-  };
-
   const handleDelete = async () => {
     if (!emitenteAtual?.id) return;
 
@@ -249,16 +188,10 @@ export function ListarEmitentes() {
       }
     } catch (error) {
       console.error('Erro ao excluir emitente:', error);
-      // Aqui vocÃª poderia mostrar um toast de erro
+      // Aqui vocÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âª poderia mostrar um toast de erro
     } finally {
       setExcluindo(false);
     }
-  };
-
-  const handleCNPJDataFetch = (data: any) => {
-    // Esta funÃ§Ã£o serÃ¡ chamada quando o CNPJ for consultado automaticamente
-    // Os dados serÃ£o automaticamente preenchidos pelo GenericFormModal
-    console.log('Dados do CNPJ consultados:', data);
   };
 
   const aplicarFiltros = () => {
@@ -312,7 +245,7 @@ export function ListarEmitentes() {
           </div>
           <button
             className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-            onClick={abrirModalNovo}
+            onClick={abrirNovo}
           >
             <Icon name="plus" size="lg" />
             <span>Novo Emitente</span>
@@ -326,7 +259,7 @@ export function ListarEmitentes() {
               <label className="block text-sm font-medium text-foreground mb-2">Buscar</label>
               <input
                 type="text"
-                placeholder="RazÃ£o social ou CNPJ..."
+                placeholder="RazÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o social ou CNPJ..."
                 value={filtroTemp}
                 onChange={(e) => setFiltroTemp(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && aplicarFiltros()}
@@ -342,8 +275,8 @@ export function ListarEmitentes() {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               >
                 <option value="">Todos os tipos</option>
-                <option value="PrestadorServico">Prestador de ServiÃ§o</option>
-                <option value="EntregaPropria">Entrega PrÃ³pria</option>
+                <option value="PrestadorServico">Prestador de ServiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§o</option>
+                <option value="EntregaPropria">Entrega PrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³pria</option>
               </select>
             </div>
 
@@ -429,7 +362,7 @@ export function ListarEmitentes() {
               <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
                 Filtros ativos:
                 {filtro && <span className="ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs">{filtro}</span>}
-                {filtroTipo && <span className="ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs">{filtroTipo === 'PrestadorServico' ? 'Prestador' : 'Entrega PrÃ³pria'}</span>}
+                {filtroTipo && <span className="ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs">{filtroTipo === 'PrestadorServico' ? 'Prestador' : 'Entrega PrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³pria'}</span>}
                 {filtroStatus && <span className="ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs">{filtroStatus === 'ativo' ? 'Ativo' : 'Inativo'}</span>}
                 {filtroUf && <span className="ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs">{filtroUf}</span>}
               </span>
@@ -448,7 +381,7 @@ export function ListarEmitentes() {
                 {(filtro || filtroTipo || filtroStatus || filtroUf) ? 'Nenhum emitente encontrado com os filtros aplicados' : 'Nenhum emitente encontrado'}
               </h3>
               <p className="text-muted-foreground text-center">
-                {(filtro || filtroTipo || filtroStatus || filtroUf) ? 'Tente ajustar os filtros ou limpar para ver todos os emitentes.' : 'Adicione um novo emitente para comeÃ§ar.'}
+                {(filtro || filtroTipo || filtroStatus || filtroUf) ? 'Tente ajustar os filtros ou limpar para ver todos os emitentes.' : 'Adicione um novo emitente para comeÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ar.'}
               </p>
             </div>
           ) : (
@@ -457,9 +390,9 @@ export function ListarEmitentes() {
                 <div className="text-center">Documento</div>
                 <div className="text-center">Empresa</div>
                 <div className="text-center">Tipo</div>
-                <div className="text-center">LocalizaÃ§Ã£o</div>
+                <div className="text-center">LocalizaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o</div>
                 <div className="text-center">Status</div>
-                <div className="text-center">AÃ§Ãµes</div>
+                <div className="text-center">AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes</div>
               </div>
 
               {emitentes.map((emitente) => (
@@ -468,7 +401,7 @@ export function ListarEmitentes() {
                     <div className="font-medium text-foreground">
                       {emitente.cnpj ? formatCNPJ(emitente.cnpj) :
                        emitente.cpf ? formatCPF(emitente.cpf) :
-                       'NÃ£o informado'}
+                       'NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o informado'}
                     </div>
                     {emitente.ie && (
                       <div className="text-sm text-gray-500 dark:text-gray-400">IE: {emitente.ie}</div>
@@ -486,15 +419,15 @@ export function ListarEmitentes() {
                         ? 'text-blue-600 dark:text-blue-400'
                         : 'text-green-600 dark:text-green-400'
                     }`}>
-                      {emitente.tipoEmitente === 'PrestadorServico' ? 'Prestador' : 'Entrega PrÃ³pria'}
+                      {emitente.tipoEmitente === 'PrestadorServico' ? 'Prestador' : 'Entrega PrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³pria'}
                     </span>
                   </div>
                   <div className="text-center">
                     <div className="font-medium text-foreground text-sm">
-                      {emitente.endereco ? `${emitente.endereco}${emitente.numero ? ', ' + emitente.numero : ''}` : 'NÃ£o informado'}
+                      {emitente.endereco ? `${emitente.endereco}${emitente.numero ? ', ' + emitente.numero : ''}` : 'NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o informado'}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {emitente.bairro ? `${emitente.bairro}, ` : ''}{emitente.municipio || 'NÃ£o informado'}/{emitente.uf}
+                      {emitente.bairro ? `${emitente.bairro}, ` : ''}{emitente.municipio || 'NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o informado'}/{emitente.uf}
                     </div>
                   </div>
                   <div className="text-center flex justify-center">
@@ -509,21 +442,21 @@ export function ListarEmitentes() {
                   <div className="flex items-center justify-center gap-2">
                     <button
                       className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200"
-                      onClick={() => abrirModalVisualizacao(emitente)}
+                      onClick={() => abrirVisualizacao(emitente)}
                       title="Visualizar"
                     >
                       <Icon name="eye" />
                     </button>
                     <button
                       className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
-                      onClick={() => abrirModalEdicao(emitente)}
+                      onClick={() => abrirEdicao(emitente)}
                       title="Editar"
                     >
                       <Icon name="edit" />
                     </button>
                     <button
                       className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200"
-                      onClick={() => abrirModalExclusao(emitente)}
+                      onClick={() => abrirExclusao(emitente)}
                       title="Excluir"
                     >
                       <Icon name="trash" />
@@ -535,12 +468,12 @@ export function ListarEmitentes() {
           )}
         </div>
 
-        {/* PaginaÃ§Ã£o */}
+        {/* PaginaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o */}
         {paginacao && paginacao.totalItems > 0 && (
           <div className="mt-6 bg-card border-t border-gray-200 dark:border-0 p-4 rounded-b-lg">
             <div className="flex flex-row justify-between items-center gap-4">
               <div className="text-sm text-muted-foreground text-left">
-                Mostrando {paginacao.startItem || ((paginacao.currentPage - 1) * paginacao.pageSize) + 1} atÃ© {paginacao.endItem || Math.min(paginacao.currentPage * paginacao.pageSize, paginacao.totalItems)} de {paginacao.totalItems} emitentes
+                Mostrando {paginacao.startItem || ((paginacao.currentPage - 1) * paginacao.pageSize) + 1} atÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© {paginacao.endItem || Math.min(paginacao.currentPage * paginacao.pageSize, paginacao.totalItems)} de {paginacao.totalItems} emitentes
               </div>
 
               {paginacao.totalPages > 1 && (
@@ -562,13 +495,13 @@ export function ListarEmitentes() {
                     disabled={!paginacao.hasNextPage}
                     className="px-4 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground hover:bg-background dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
                   >
-                    PrÃ³xima
+                    PrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³xima
                   </button>
                 </div>
               )}
 
               <div className="flex items-center gap-2">
-                <label className="text-sm text-foreground">Itens por pÃ¡gina:</label>
+                <label className="text-sm text-foreground">Itens por pÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡gina:</label>
                 <select
                   value={tamanhoPagina}
                   onChange={(e) => {
@@ -587,25 +520,60 @@ export function ListarEmitentes() {
           </div>
         )}
 
-        {/* Modais CRUD */}
-        <EmitenteCRUD
-          viewModalOpen={modalVisualizacao}
-          formModalOpen={modalFormulario}
-          deleteModalOpen={modalExclusao}
-          selectedEmitente={emitenteAtual}
-          isEdit={modoEdicao}
-          onViewClose={fecharModais}
-          onFormClose={fecharModais}
-          onDeleteClose={fecharModais}
-          onSave={handleSave}
-          onEdit={abrirModalEdicao}
-          onDelete={handleDelete}
-          onCNPJDataFetch={handleCNPJDataFetch}
-          saving={salvando}
-          deleting={excluindo}
+        {/* Modal de visualizaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o */}
+        <GenericViewModal
+          isOpen={modalVisualizacao}
+          onClose={fecharModais}
+          item={emitenteAtual}
+          title={emitenteConfig.view.title}
+          subtitle={emitenteConfig.view.subtitle}
+          headerIcon={emitenteConfig.view.headerIcon}
+          headerColor={emitenteConfig.view.headerColor}
+          sections={emitenteAtual ? emitenteConfig.view.getSections(emitenteAtual) : []}
+          actions={
+            emitenteAtual
+              ? [
+                  {
+                    label: 'Editar Emitente',
+                    icon: 'edit',
+                    variant: 'warning' as const,
+                    onClick: () => {
+                      fecharModais();
+                      abrirEdicao(emitenteAtual);
+                    }
+                  }
+                ]
+              : []
+          }
+          statusConfig={emitenteAtual ? emitenteConfig.view.getStatusConfig?.(emitenteAtual) : undefined}
+          idField={emitenteConfig.view.idField}
+        />
+
+        {/* Modal de exclusÃƒÆ’Ã‚Â£o */}
+        <ConfirmDeleteModal
+          isOpen={modalExclusao}
+          title="Excluir Emitente"
+          message="Tem certeza de que deseja excluir este emitente?"
+          itemName={emitenteAtual ? `${emitenteAtual.razaoSocial}${emitenteAtual.cnpj ? ` (${formatCNPJ(emitenteAtual.cnpj)})` : emitenteAtual.cpf ? ` (${formatCPF(emitenteAtual.cpf)})` : ''}` : ''}
+          onConfirm={handleDelete}
+          onClose={() => {
+            setModalExclusao(false);
+            setEmitenteAtual(null);
+            setExcluindo(false);
+          }}
+          loading={excluindo}
         />
       </div>
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
 

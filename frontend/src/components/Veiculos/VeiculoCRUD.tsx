@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GenericViewModal } from '../UI/feedback/GenericViewModal';
 import { GenericFormModal } from '../UI/feedback/GenericFormModal';
 import { ConfirmDeleteModal } from '../UI/feedback/ConfirmDeleteModal';
@@ -9,108 +9,122 @@ interface Veiculo {
   placa: string;
   marca?: string;
   tara: number;
-  tipoRodado: string;
-  tipoCarroceria: string;
+  tipoRodado?: string;
+  tipoCarroceria?: string;
   uf: string;
   ativo?: boolean;
 }
 
 interface VeiculoCRUDProps {
-  // Modais
-  viewModalOpen: boolean;
-  formModalOpen: boolean;
-  deleteModalOpen: boolean;
+  // Estados dos modais
+  showViewModal: boolean;
+  showFormModal: boolean;
+  showDeleteModal: boolean;
 
   // Dados
-  selectedVeiculo: Veiculo | null;
-  isEdit: boolean;
+  selectedItem: Veiculo | null;
+  isEditing: boolean;
 
-  // Callbacks
-  onViewClose: () => void;
-  onFormClose: () => void;
-  onDeleteClose: () => void;
-  onSave: (data: Veiculo) => Promise<void>;
-  onEdit: (veiculo: Veiculo) => void;
+  // Handlers
+  onCloseModals: () => void;
+  onSave: (data: any) => Promise<void>;
   onDelete: () => Promise<void>;
 
-  // Estados
-  saving?: boolean;
-  deleting?: boolean;
+  // Estados de loading
+  saving: boolean;
+  deleting: boolean;
 }
 
 export function VeiculoCRUD({
-  viewModalOpen,
-  formModalOpen,
-  deleteModalOpen,
-  selectedVeiculo,
-  isEdit,
-  onViewClose,
-  onFormClose,
-  onDeleteClose,
+  showViewModal,
+  showFormModal,
+  showDeleteModal,
+  selectedItem,
+  isEditing,
+  onCloseModals,
   onSave,
-  onEdit,
   onDelete,
-  saving = false,
-  deleting = false
+  saving,
+  deleting
 }: VeiculoCRUDProps) {
+  const [formData, setFormData] = useState<any>({
+    placa: '',
+    marca: '',
+    tara: 0,
+    tipoRodado: '',
+    tipoCarroceria: '',
+    uf: '',
+    ativo: true
+  });
 
-  // Configurar ações do modal de visualização
-  const viewActions = selectedVeiculo ? [
-    {
-      label: 'Editar Veículo',
-      icon: 'edit',
-      onClick: () => {
-        onViewClose();
-        onEdit(selectedVeiculo);
-      }
+  // Função para popular o formulário
+  React.useEffect(() => {
+    if (selectedItem && showFormModal) {
+      setFormData({
+        placa: selectedItem.placa || '',
+        marca: selectedItem.marca || '',
+        tara: selectedItem.tara || 0,
+        tipoRodado: selectedItem.tipoRodado || '',
+        tipoCarroceria: selectedItem.tipoCarroceria || '',
+        uf: selectedItem.uf || '',
+        ativo: selectedItem.ativo ?? true
+      });
+    } else if (!isEditing && showFormModal) {
+      setFormData({
+        placa: '',
+        marca: '',
+        tara: 0,
+        tipoRodado: '',
+        tipoCarroceria: '',
+        uf: '',
+        ativo: true
+      });
     }
-  ] : [];
+  }, [selectedItem, showFormModal, isEditing]);
+
+  const handleFieldChange = (name: string, value: any) => {
+    setFormData((prev: any) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async () => {
+    await onSave(formData);
+  };
 
   return (
     <>
-      {/* Modal de Visualização */}
-      <GenericViewModal
-        isOpen={viewModalOpen}
-        onClose={onViewClose}
-        item={selectedVeiculo}
-        title={veiculoConfig.view.title}
-        subtitle={veiculoConfig.view.subtitle}
-        headerIcon={veiculoConfig.view.headerIcon}
-        headerColor={veiculoConfig.view.headerColor}
-        sections={selectedVeiculo ? veiculoConfig.view.getSections(selectedVeiculo) : []}
-        actions={viewActions}
-        statusConfig={selectedVeiculo ? veiculoConfig.view.getStatusConfig?.(selectedVeiculo) : undefined}
-        idField={veiculoConfig.view.idField}
-      />
+      {showViewModal && selectedItem && (
+        <GenericViewModal
+          config={veiculoConfig}
+          data={selectedItem}
+          onClose={onCloseModals}
+          onEdit={() => {
+            onCloseModals();
+            // O componente pai deve reabrir o modal de edição
+          }}
+        />
+      )}
 
-      {/* Modal de Criação/Edição */}
-      <GenericFormModal
-        isOpen={formModalOpen}
-        onClose={onFormClose}
-        onSave={onSave}
-        item={selectedVeiculo}
-        isEditing={isEdit}
-        title={isEdit ? (veiculoConfig.form.editTitle || veiculoConfig.form.title) : veiculoConfig.form.title}
-        subtitle={isEdit ? (veiculoConfig.form.editSubtitle || veiculoConfig.form.subtitle) : veiculoConfig.form.subtitle}
-        headerIcon={veiculoConfig.form.headerIcon}
-        headerColor={veiculoConfig.form.headerColor}
-        sections={veiculoConfig.form.getSections(selectedVeiculo)}
-        loading={saving}
-      />
+      {showFormModal && (
+        <GenericFormModal
+          config={veiculoConfig}
+          data={formData}
+          isEditing={isEditing}
+          loading={saving}
+          onSave={handleSave}
+          onCancel={onCloseModals}
+          onFieldChange={handleFieldChange}
+        />
+      )}
 
-      {/* Modal de Confirmação de Exclusão */}
-      <ConfirmDeleteModal
-        isOpen={deleteModalOpen}
-        title="Excluir Veículo"
-        message="Tem certeza de que deseja excluir este veículo?"
-        itemName={selectedVeiculo ?
-          `veículo ${selectedVeiculo.placa} (${selectedVeiculo.marca || 'Sem marca'})`
-          : ''
-        }
-        onConfirm={onDelete}
-        onCancel={onDeleteClose}
-        loading={deleting}
-      />
+      {showDeleteModal && selectedItem && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          itemName={`veículo "${selectedItem.placa}"`}
+          onConfirm={onDelete}
+          onClose={onCloseModals}
+          loading={deleting}
+        />
+      )}
     </>
   );
 }

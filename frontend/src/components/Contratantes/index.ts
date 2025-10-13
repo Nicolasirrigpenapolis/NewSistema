@@ -1,0 +1,1 @@
+export { contratanteConfig } from './ContratanteConfig';

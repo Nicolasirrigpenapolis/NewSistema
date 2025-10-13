@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { SeguradoraCRUD } from '../../../components/Seguradoras/SeguradoraCRUD';
-import { formatCNPJ, cleanNumericString } from '../../../utils/formatters';
+import { useNavigate } from 'react-router-dom';
+import { formatCNPJ } from '../../../utils/formatters';
 import { entitiesService } from '../../../services/entitiesService';
-import Icon from '../../../components/UI/Icon';
+import { Icon } from '../../../ui';
+import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
+import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
+import { seguradoraConfig } from '../../../components/Seguradoras/SeguradoraConfig';
 
 interface Seguradora {
   id?: number;
@@ -25,6 +28,7 @@ interface PaginationData {
 }
 
 export function ListarSeguradoras() {
+  const navigate = useNavigate();
   const [seguradoras, setSeguradoras] = useState<Seguradora[]>([]);
   const [carregando, setCarregando] = useState(false);
 
@@ -41,10 +45,7 @@ export function ListarSeguradoras() {
 
   // Estados para modais
   const [modalVisualizacao, setModalVisualizacao] = useState(false);
-  const [modalEdicao, setModalEdicao] = useState(false);
   const [seguradoraSelecionada, setSeguradoraSelecionada] = useState<Seguradora | null>(null);
-  const [dadosFormulario, setDadosFormulario] = useState<Partial<Seguradora>>({});
-  const [salvando, setSalvando] = useState(false);
 
   // Estados do modal de exclusão
   const [modalExclusao, setModalExclusao] = useState(false);
@@ -115,60 +116,28 @@ export function ListarSeguradoras() {
     }
   };
 
+  const abrirFormularioNovo = () => {
+    navigate('/seguradoras/novo');
+  };
+
+  const abrirFormularioEdicao = (seguradora: Seguradora) => {
+    if (seguradora.id) {
+      navigate(`/seguradoras/${seguradora.id}/editar`, { state: { seguradora } });
+    } else {
+      navigate('/seguradoras/novo', { state: { seguradora } });
+    }
+  };
+
   const abrirModalVisualizacao = (seguradora: Seguradora) => {
     setSeguradoraSelecionada(seguradora);
     setModalVisualizacao(true);
   };
 
-  const abrirModalEdicao = (seguradora?: Seguradora) => {
-    if (seguradora) {
-      setSeguradoraSelecionada(seguradora);
-      setDadosFormulario(seguradora);
-    } else {
-      setSeguradoraSelecionada(null);
-      setDadosFormulario({});
-    }
-    setModalEdicao(true);
-  };
-
   const fecharModais = () => {
     setModalVisualizacao(false);
-    setModalEdicao(false);
     setSeguradoraSelecionada(null);
-    setDadosFormulario({});
   };
 
-  const salvarSeguradora = async (dados: Partial<Seguradora>) => {
-    setSalvando(true);
-    try {
-      const dadosParaSalvar = {
-        cnpj: dados.cnpj || '',
-        razaoSocial: dados.razaoSocial?.trim() || '',
-        nomeFantasia: dados.nomeFantasia?.trim() || undefined,
-        apolice: dados.apolice?.trim() || undefined,
-        ativo: dados.ativo !== false
-      };
-
-      let resposta;
-      if (seguradoraSelecionada?.id) {
-        resposta = await entitiesService.atualizarSeguradora(seguradoraSelecionada.id, dadosParaSalvar);
-      } else {
-        resposta = await entitiesService.criarSeguradora(dadosParaSalvar);
-      }
-
-      if (resposta.sucesso) {
-        fecharModais();
-        carregarSeguradoras();
-      } else {
-        alert(`Erro ao salvar seguradora: ${resposta.mensagem}`);
-      }
-    } catch (error) {
-      console.error('Erro ao salvar seguradora:', error);
-      alert('Erro inesperado ao salvar seguradora. Verifique os dados e tente novamente.');
-    } finally {
-      setSalvando(false);
-    }
-  };
 
   const abrirModalExclusao = (seguradora: Seguradora) => {
     setSeguradoraExclusao(seguradora);
@@ -216,13 +185,6 @@ export function ListarSeguradoras() {
     setPaginaAtual(1);
   };
 
-  const atualizarCampo = (campo: string, valor: any) => {
-    setDadosFormulario(prev => ({
-      ...prev,
-      [campo]: valor
-    }));
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <div className="w-full px-6 py-8">
@@ -238,7 +200,7 @@ export function ListarSeguradoras() {
           </div>
           <button
             className="px-6 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-            onClick={() => abrirModalEdicao()}
+            onClick={abrirFormularioNovo}
           >
             <i className="fas fa-plus text-lg"></i>
             <span>Nova Seguradora</span>
@@ -350,7 +312,6 @@ export function ListarSeguradoras() {
                   </button>
                   <button
                     className="px-3 py-1 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded transition-colors duration-200"
-                    onClick={() => abrirModalEdicao(seguradora)}
                   >
                     Editar
                   </button>
@@ -419,20 +380,52 @@ export function ListarSeguradoras() {
         </div>
       )}
 
-      <SeguradoraCRUD
-        viewModalOpen={modalVisualizacao}
-        formModalOpen={modalEdicao}
-        deleteModalOpen={modalExclusao}
-        selectedSeguradora={seguradoraSelecionada}
-        isEdit={!!seguradoraSelecionada}
-        onViewClose={fecharModais}
-        onFormClose={fecharModais}
-        onDeleteClose={fecharModalExclusao}
-        onSave={salvarSeguradora}
-        onEdit={(seguradora) => abrirModalEdicao(seguradora)}
-        onDelete={confirmarExclusao}
-        saving={salvando}
-        deleting={excludindo}
+      <GenericViewModal
+        isOpen={modalVisualizacao}
+        onClose={() => {
+          setModalVisualizacao(false);
+          setSeguradoraSelecionada(null);
+        }}
+        item={seguradoraSelecionada}
+        title={seguradoraConfig.view.title}
+        subtitle={seguradoraConfig.view.subtitle}
+        headerIcon={seguradoraConfig.view.headerIcon}
+        headerColor={seguradoraConfig.view.headerColor}
+        sections={seguradoraSelecionada ? seguradoraConfig.view.getSections(seguradoraSelecionada) : []}
+        actions={
+          seguradoraSelecionada
+            ? [
+                {
+                  label: 'Editar Seguradora',
+                  icon: 'edit',
+                  variant: 'warning' as const,
+                  onClick: () => {
+                    setModalVisualizacao(false);
+                    abrirFormularioEdicao(seguradoraSelecionada);
+                  }
+                }
+              ]
+            : []
+        }
+        statusConfig={seguradoraSelecionada ? seguradoraConfig.view.getStatusConfig?.(seguradoraSelecionada) : undefined}
+        idField={seguradoraConfig.view.idField}
+      />
+      <ConfirmDeleteModal
+        isOpen={modalExclusao}
+        title="Excluir Seguradora"
+        message="Tem certeza de que deseja excluir esta seguradora?"
+        itemName={
+          seguradoraExclusao
+            ? `${seguradoraExclusao.razaoSocial} (${formatCNPJ(seguradoraExclusao.cnpj)})`
+            : ''
+        }
+        onConfirm={confirmarExclusao}
+        onClose={() => {
+          setModalExclusao(false);
+          setSeguradoraExclusao(null);
+          setExcluindo(false);
+        }}
+        loading={excludindo}
       />
       </div>
     </div>

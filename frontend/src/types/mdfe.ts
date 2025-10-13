@@ -313,3 +313,16 @@ export interface EntidadesCarregadas {
   seguradoras?: EntidadeOpcao[];
 }
 
+export interface MdfeTransmissaoResponse {
+  sucesso: boolean;
+  numeroLote?: string;
+  codigoStatus?: string;
+  motivoStatus?: string;
+  protocolo?: string;
+  numeroRecibo?: string;
+  dataRecebimento?: string;
+  chaveMDFe?: string;
+  versaoAplicativo?: string;
+  xmlAutorizado?: string;
+}
+

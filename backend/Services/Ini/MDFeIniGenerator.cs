@@ -1,5 +1,7 @@
 using Backend.Api.Interfaces;
 using Backend.Api.Models;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
@@ -574,8 +576,38 @@ public class MDFeIniGenerator : IMDFeIniGenerator
 
     public string GerarIniEvento(string tipoEvento, MDFe mdfe, Dictionary<string, string> parametrosEvento)
     {
-        // Implementação será feita em MDFeEventoIniGenerator
-        throw new NotImplementedException("Use MDFeEventoIniGenerator");
+        if (mdfe == null)
+            throw new ArgumentNullException(nameof(mdfe));
+
+        if (string.IsNullOrWhiteSpace(tipoEvento))
+            throw new ArgumentException("Tipo de evento não informado", nameof(tipoEvento));
+
+        var parametros = parametrosEvento ?? new Dictionary<string, string>();
+        var codigo = tipoEvento.Trim();
+
+        return codigo switch
+        {
+            "110111" => MDFeEventoIniGenerator.GerarIniCancelamento(
+                mdfe,
+                parametros.GetValueOrDefault("Justificativa") ?? throw new ArgumentException("Justificativa obrigatória para cancelamento", nameof(parametrosEvento)),
+                parametros.GetValueOrDefault("Protocolo") ?? mdfe.Protocolo ?? string.Empty),
+            "110112" => MDFeEventoIniGenerator.GerarIniEncerramento(
+                mdfe,
+                parametros.GetValueOrDefault("CodigoMunicipio") ?? throw new ArgumentException("Código do município de encerramento obrigatório", nameof(parametrosEvento)),
+                parametros.TryGetValue("DataEncerramento", out var dataEnc) && DateTime.TryParse(dataEnc, out var dtEnc)
+                    ? dtEnc
+                    : mdfe.DataEncerramento ?? DateTime.Now),
+            "110114" => MDFeEventoIniGenerator.GerarIniInclusaoCondutor(
+                mdfe,
+                parametros.GetValueOrDefault("NomeCondutor") ?? throw new ArgumentException("Nome do condutor obrigatório", nameof(parametrosEvento)),
+                parametros.GetValueOrDefault("CpfCondutor") ?? throw new ArgumentException("CPF do condutor obrigatório", nameof(parametrosEvento))),
+            "110115" => MDFeEventoIniGenerator.GerarIniInclusaoDFe(
+                mdfe,
+                parametros.GetValueOrDefault("CodigoMunicipioDescarga") ?? throw new ArgumentException("Código do município de descarga obrigatório", nameof(parametrosEvento)),
+                parametros.GetValueOrDefault("ChaveDocumento") ?? throw new ArgumentException("Chave do documento obrigatória", nameof(parametrosEvento)),
+                parametros.GetValueOrDefault("TipoDocumento") ?? "NFe"),
+            _ => MDFeEventoIniGenerator.GerarIniEventoGenerico(mdfe, codigo, parametros)
+        };
     }
 
     #region Helpers

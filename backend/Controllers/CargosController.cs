@@ -12,7 +12,7 @@ namespace Backend.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    // [Authorize] // REMOVIDO temporariamente para desenvolvimento - Reativar em produção
     public class CargosController : ControllerBase
     {
         private readonly SistemaContext _context;

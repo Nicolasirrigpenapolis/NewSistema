@@ -1,0 +1,622 @@
+[
+  {
+    "id": "TC001",
+    "title": "User login with valid credentials",
+    "description": "Verify that a user can successfully login with valid credentials and receives a JWT token with proper permissions.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login page"
+      },
+      {
+        "type": "action",
+        "description": "Enter valid username and password"
+      },
+      {
+        "type": "action",
+        "description": "Click login button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify JWT token is returned and stored"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is redirected to /dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user permissions correspond to assigned role"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User login with invalid credentials",
+    "description": "Verify system denies login when using invalid username or password and shows appropriate error message.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login page"
+      },
+      {
+        "type": "action",
+        "description": "Enter invalid username or password"
+      },
+      {
+        "type": "action",
+        "description": "Click login button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify login is denied"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify error message about invalid credentials is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Automatic token renewal before expiration",
+    "description": "Verify that the JWT token is automatically renewed before expiration without interrupting the user session.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login with valid user credentials"
+      },
+      {
+        "type": "action",
+        "description": "Simulate token nearing expiration"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that token renewal request is automatically triggered"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that new valid token is received and stored"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user session remains active without logout"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "MDF-e creation with valid data",
+    "description": "Verify that a user can successfully create and emit a MDF-e with valid data, and it integrates correctly with SEFAZ via ACBr library.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mdfe-editor"
+      },
+      {
+        "type": "action",
+        "description": "Fill MDF-e form with valid and complete data"
+      },
+      {
+        "type": "action",
+        "description": "Submit MDF-e emission form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify MDF-e status is initially 'Pending'"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify communication with SEFAZ via ACBr is successful"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify MDF-e status updates to 'Authorized'"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify INI file is generated correctly for ACBr"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "MDF-e emission with invalid or incomplete data",
+    "description": "Verify that MDF-e emission fails appropriately when required fields are missing or data is invalid, with proper error messages.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mdfe-editor"
+      },
+      {
+        "type": "action",
+        "description": "Fill MDF-e form with missing or invalid data"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to submit emission"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors are shown on form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify MDF-e emission is not sent to SEFAZ"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify MDF-e status remains unset or error status"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "List and filter MDF-e documents",
+    "description": "Verify that MDF-es can be listed with filters applied, showing correct results based on filter criteria.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mdfes page"
+      },
+      {
+        "type": "action",
+        "description": "Apply filters (date range, status, emitente, etc.)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify displayed MDF-es match filter criteria"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify pagination works for large results"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "CRUD operations for vehicles entity",
+    "description": "Verify full create, read, update, and delete operations on Vehicles entity with data integrity and validation.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /veiculos page"
+      },
+      {
+        "type": "action",
+        "description": "Create a new vehicle with valid data"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify new vehicle is listed"
+      },
+      {
+        "type": "action",
+        "description": "Update vehicle details with valid changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify changes are saved and reflected"
+      },
+      {
+        "type": "action",
+        "description": "Delete a vehicle"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify vehicle is removed from the list and database"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "CRUD operations for drivers (condutores) entity",
+    "description": "Verify full lifecycle of drivers entity including validation of personal data and updates.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /condutores page"
+      },
+      {
+        "type": "action",
+        "description": "Create a new condutor with valid CPF and other data"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify new condutor is listed"
+      },
+      {
+        "type": "action",
+        "description": "Update condutor data (e.g. license expiry)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify updates are saved"
+      },
+      {
+        "type": "action",
+        "description": "Delete a condutor"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify deletion is successful"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Import municipalities from IBGE API",
+    "description": "Verify that municipalities can be imported from the IBGE external API, and data is correctly stored and searchable.",
+    "category": "integration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger municipalities import from IBGE API on /municipios page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify external API is called and response received"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify imported data is stored in database"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify municipalities appear in searchable list"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "CNPJ external consultation integration",
+    "description": "Verify that the external CNPJ consultation API returns correct company data and populates form fields automatically.",
+    "category": "integration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a form with CNPJ input (e.g. /emitentes or /contratantes)"
+      },
+      {
+        "type": "action",
+        "description": "Enter a valid CNPJ"
+      },
+      {
+        "type": "action",
+        "description": "Trigger CNPJ lookup"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify external API is called"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify company data fields are auto-populated"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Vehicle maintenance tracking with report export",
+    "description": "Verify that vehicle maintenance records can be created, viewed, filtered, and reports can be exported in supported formats.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /manutencoes page"
+      },
+      {
+        "type": "action",
+        "description": "Create new maintenance record with required data"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify maintenance record is listed"
+      },
+      {
+        "type": "action",
+        "description": "Apply filters to maintenance list (date, vehicle, cost)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify list displays records matching filters"
+      },
+      {
+        "type": "action",
+        "description": "Export maintenance report to PDF and Excel"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify exported files are generated and download successfully"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Travel recording and route management",
+    "description": "Verify that users can create travel records linked to vehicles and routes, and routes can be managed and tracked.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /viagens page"
+      },
+      {
+        "type": "action",
+        "description": "Create new travel entry with required vehicle, driver, route and client details"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify new travel is listed"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /rotas for route management"
+      },
+      {
+        "type": "action",
+        "description": "Create and edit route details"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify routes are correctly saved and displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Permission enforcement based on user roles",
+    "description": "Verify that users with different roles have access only to allowed features and UI elements, tested by various permission presets.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as user with restricted role"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify restricted menu items and API endpoints are not accessible"
+      },
+      {
+        "type": "action",
+        "description": "Login as user with admin role"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify full access to all administration pages and features"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Theme switching between light and dark modes",
+    "description": "Verify that users can switch UI themes between light and dark modes, and the preference is persisted across sessions.",
+    "category": "ui",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to any page"
+      },
+      {
+        "type": "action",
+        "description": "Toggle theme switcher to dark mode"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI switches to dark theme"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page or logout/login"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify dark mode preference persists"
+      },
+      {
+        "type": "action",
+        "description": "Toggle back to light mode and verify persistence"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Form validation for required and optional fields with input masks",
+    "description": "Verify all forms across core entities enforce proper validation rules including required fields, format validation with masks (e.g., CNPJ, CPF), and optional configurable fields.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to creation form for any entity (e.g., /emitentes)"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to submit with missing required fields"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors prevent submission"
+      },
+      {
+        "type": "action",
+        "description": "Enter invalid format data in masked fields (e.g., CNPJ with letters)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error messages appear"
+      },
+      {
+        "type": "action",
+        "description": "Enter valid data and submit successfully"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify form submits and data persists"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "System performance under load conditions",
+    "description": "Verify that key API endpoints respond under 2 seconds and dashboard loads within 3 seconds under simulated peak loads.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate concurrent user requests for /api/mdfe and other APIs"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify API response times are less than 2 seconds"
+      },
+      {
+        "type": "action",
+        "description": "Load /dashboard page under load"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify dashboard content renders within 3 seconds"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Security: Password hashing and HTTPS enforcement",
+    "description": "Verify user passwords are securely hashed using BCrypt and all API communication is over HTTPS.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create or reset user password"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify password is stored hashed with BCrypt in database"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access API endpoints over HTTP"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify HTTP requests are redirected or blocked"
+      },
+      {
+        "type": "action",
+        "description": "Access API endpoints over HTTPS"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response is successful over HTTPS"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Administration: Role and permission management",
+    "description": "Verify CRUD operations on roles and permissions with permission matrix visualization and presets application.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/cargos"
+      },
+      {
+        "type": "action",
+        "description": "Create a new role with selected permissions"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify role is saved and appears in list"
+      },
+      {
+        "type": "action",
+        "description": "Update role permissions"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify permission matrix updates accordingly"
+      },
+      {
+        "type": "action",
+        "description": "Delete a role"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify role is removed and users assigned to it are handled"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Audit logging for critical actions",
+    "description": "Verify critical system actions such as user login, MDF-e emission, and entity CRUD operations are logged with correct details.",
+    "category": "security",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform user login, MDF-e emission, and entity create/update/delete"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify audit logs are created capturing actor, timestamp, action, and affected entities"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify logs are accessible to authorized admin users"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Backup and uptime monitoring",
+    "description": "Verify that daily backups are created successfully and system uptime meets SLA of 99%.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Check backup logs and storage after scheduled backup time"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify backups completed without errors"
+      },
+      {
+        "type": "action",
+        "description": "Monitor system availability over period"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify uptime is at least 99%"
+      }
+    ]
+  }
+]

@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../../../components/UI/button';
-import { Input } from '../../../components/UI/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/UI/select';
-import { Label } from '../../../components/UI/label';
-import Icon from '../../../components/UI/Icon';
+import { Button, Input, Label, Icon } from '../../../ui';
+// Using native <select> instead of removed components
 import { fornecedoresService, FornecedorListDto, FornecedorFiltros } from '../../../services/fornecedoresService';
 
 interface Paginacao {
@@ -180,30 +177,30 @@ export function ListarFornecedores() {
 
           <div className="space-y-2">
             <Label htmlFor="filtro-tipo">Tipo</Label>
-            <Select value={filtros.tipoPessoa || 'todos'} onValueChange={(value) => handleFiltroChange('tipoPessoa', value === 'todos' ? undefined : value)}>
-              <SelectTrigger id="filtro-tipo">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="F">Pessoa Física</SelectItem>
-                <SelectItem value="J">Pessoa Jurídica</SelectItem>
-              </SelectContent>
-            </Select>
+            <select
+              id="filtro-tipo"
+              value={filtros.tipoPessoa || 'todos'}
+              onChange={(e) => handleFiltroChange('tipoPessoa', e.target.value === 'todos' ? undefined : e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="todos">Todos</option>
+              <option value="F">Pessoa Física</option>
+              <option value="J">Pessoa Jurídica</option>
+            </select>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="filtro-status">Status</Label>
-            <Select value={filtros.ativo?.toString() || 'todos'} onValueChange={(value) => handleFiltroChange('ativo', value === 'todos' ? undefined : value === 'true')}>
-              <SelectTrigger id="filtro-status">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="true">Ativo</SelectItem>
-                <SelectItem value="false">Inativo</SelectItem>
-              </SelectContent>
-            </Select>
+            <select
+              id="filtro-status"
+              value={filtros.ativo?.toString() || 'todos'}
+              onChange={(e) => handleFiltroChange('ativo', e.target.value === 'todos' ? undefined : e.target.value === 'true')}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="todos">Todos</option>
+              <option value="true">Ativo</option>
+              <option value="false">Inativo</option>
+            </select>
           </div>
         </div>
 

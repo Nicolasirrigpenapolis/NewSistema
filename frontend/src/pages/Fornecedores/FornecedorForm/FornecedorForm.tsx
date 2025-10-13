@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button } from '../../../components/UI/button';
-import { Input } from '../../../components/UI/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/UI/select';
-import { Textarea } from '../../../components/UI/textarea';
-import { Label } from '../../../components/UI/label';
-import Icon from '../../../components/UI/Icon';
+import { Button, Input, Label, Icon, Textarea } from '../../../ui';
+
+// using native select elements
 import { fornecedoresService, Fornecedor, FornecedorCreateDto } from '../../../services/fornecedoresService';
 
 export function FornecedorForm() {
@@ -246,15 +243,15 @@ export function FornecedorForm() {
 
             <div className="space-y-2">
               <Label htmlFor="tipoPessoa">Tipo de Pessoa *</Label>
-              <Select value={formData.tipoPessoa} onValueChange={(value) => handleInputChange('tipoPessoa', value as 'F' | 'J')}>
-                <SelectTrigger id="tipoPessoa">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="F">Pessoa Física</SelectItem>
-                  <SelectItem value="J">Pessoa Jurídica</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                id="tipoPessoa"
+                value={formData.tipoPessoa}
+                onChange={(e) => handleInputChange('tipoPessoa', e.target.value as 'F' | 'J')}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="F">Pessoa Física</option>
+                <option value="J">Pessoa Jurídica</option>
+              </select>
             </div>
 
             <div className="space-y-2">
@@ -324,16 +321,17 @@ export function FornecedorForm() {
 
             <div className="space-y-2">
               <Label htmlFor="uf">UF</Label>
-              <Select value={formData.uf} onValueChange={(value) => handleInputChange('uf', value)}>
-                <SelectTrigger id="uf" className={errors.uf ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Selecione a UF" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ufsOptions.map((uf) => (
-                    <SelectItem key={uf.value} value={uf.value}>{uf.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                id="uf"
+                value={formData.uf}
+                onChange={(e) => handleInputChange('uf', e.target.value)}
+                className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${errors.uf ? 'border-red-500' : ''}`}
+              >
+                <option value="">Selecione a UF</option>
+                {ufsOptions.map((uf) => (
+                  <option key={uf.value} value={uf.value}>{uf.label}</option>
+                ))}
+              </select>
               {errors.uf && <p className="text-sm text-red-500">{errors.uf}</p>}
             </div>
 

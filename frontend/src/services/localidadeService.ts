@@ -14,20 +14,6 @@ export interface Municipio {
   uf: string;
 }
 
-export interface LocalCarregamento {
-  id?: string;
-  municipio: string;
-  uf: string;
-  codigoIBGE: number;
-}
-
-export interface RotaCalculada {
-  origem: LocalCarregamento;
-  destino: LocalCarregamento;
-  estadosPercurso: string[];
-  distanciaKm?: number;
-}
-
 export interface OpcaoRota {
   id: string;
   nome: string;
@@ -179,43 +165,6 @@ class LocalidadeService {
       console.error('Erro ao obter estados:', error);
       return [];
     }
-  }
-
-  // Compatibilidade: Calcula automaticamente os estados de percurso entre origem e destino (menor rota)
-  async calcularRotaInterestadual(ufOrigem: string, ufDestino: string): Promise<string[]> {
-    const rotas = await this.calcularRotasAlternativas(ufOrigem, ufDestino);
-    return rotas.length > 0 ? rotas[0].percurso : [ufOrigem, ufDestino];
-  }
-
-  // Calcula rota completa entre múltiplos pontos
-  async calcularRotaCompleta(locais: LocalCarregamento[]): Promise<RotaCalculada[]> {
-    const rotas: RotaCalculada[] = [];
-
-    for (let i = 0; i < locais.length - 1; i++) {
-      const origem = locais[i];
-      const destino = locais[i + 1];
-
-      const estadosPercurso = await this.calcularRotaInterestadual(origem.uf, destino.uf);
-
-      rotas.push({
-        origem,
-        destino,
-        estadosPercurso
-      });
-    }
-
-    return rotas;
-  }
-
-  // Obter todos os estados únicos do percurso total
-  obterEstadosPercursoTotal(rotas: RotaCalculada[]): string[] {
-    const todosEstados = new Set<string>();
-
-    rotas.forEach(rota => {
-      rota.estadosPercurso.forEach(uf => todosEstados.add(uf));
-    });
-
-    return Array.from(todosEstados).sort();
   }
 
   // Gera opções de rotas formatadas para seleção do usuário

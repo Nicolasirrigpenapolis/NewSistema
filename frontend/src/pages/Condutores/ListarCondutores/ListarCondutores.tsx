@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { CondutorCRUD } from '../../../components/Condutores/CondutorCRUD';
+import { useNavigate } from 'react-router-dom';
 import { formatCPF, cleanNumericString } from '../../../utils/formatters';
 import { entitiesService } from '../../../services/entitiesService';
 import Icon from '../../../components/UI/Icon';
+import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
+import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
+import { condutorConfig } from '../../../components/Condutores/CondutorConfig';
 
 interface Condutor {
   id?: number;
@@ -42,13 +45,11 @@ export function ListarCondutores() {
 
   // Estados dos modais CRUD
   const [modalVisualizacao, setModalVisualizacao] = useState(false);
-  const [modalFormulario, setModalFormulario] = useState(false);
   const [modalExclusao, setModalExclusao] = useState(false);
   const [condutorAtual, setCondutorAtual] = useState<Condutor | null>(null);
-  const [modoEdicao, setModoEdicao] = useState(false);
+  const navigate = useNavigate();
 
   // Estados de loading
-  const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
 
   useEffect(() => {
@@ -113,16 +114,10 @@ export function ListarCondutores() {
   };
 
   // Handlers dos modais
-  const abrirModalNovo = () => {
-    setCondutorAtual(null);
-    setModoEdicao(false);
-    setModalFormulario(true);
-  };
+  const abrirNovo = () => navigate('/condutores/novo');
 
-  const abrirModalEdicao = (condutor: Condutor) => {
-    setCondutorAtual(condutor);
-    setModoEdicao(true);
-    setModalFormulario(true);
+  const abrirEdicao = (condutor: Condutor) => {
+    navigate(`/condutores/${condutor.id}/editar`, { state: { condutor } });
   };
 
   const abrirModalVisualizacao = (condutor: Condutor) => {
@@ -137,43 +132,8 @@ export function ListarCondutores() {
 
   const fecharModais = () => {
     setModalVisualizacao(false);
-    setModalFormulario(false);
     setModalExclusao(false);
     setCondutorAtual(null);
-    setModoEdicao(false);
-  };
-
-  // Handlers de CRUD
-  const handleSave = async (dadosCondutor: Condutor) => {
-    try {
-      setSalvando(true);
-
-      const dadosLimpos = {
-        ...dadosCondutor,
-        cpf: cleanNumericString(dadosCondutor.cpf),
-        nome: dadosCondutor.nome.trim(),
-        telefone: dadosCondutor.telefone || undefined
-      };
-
-      let resposta;
-      if (modoEdicao && condutorAtual?.id) {
-        resposta = await entitiesService.atualizarCondutor(condutorAtual.id, dadosLimpos);
-      } else {
-        resposta = await entitiesService.criarCondutor(dadosLimpos);
-      }
-
-      if (resposta.sucesso) {
-        fecharModais();
-        carregarCondutores();
-      } else {
-        throw new Error(resposta.mensagem || 'Erro ao salvar condutor');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar condutor:', error);
-      throw error;
-    } finally {
-      setSalvando(false);
-    }
   };
 
   const handleDelete = async () => {
@@ -244,7 +204,7 @@ export function ListarCondutores() {
           </div>
           <button
             className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-            onClick={abrirModalNovo}
+            onClick={abrirNovo}
           >
             <Icon name="plus" size="lg" />
             <span>Novo Condutor</span>
@@ -379,7 +339,7 @@ export function ListarCondutores() {
                     </button>
                     <button
                       className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
-                      onClick={() => abrirModalEdicao(condutor)}
+                      onClick={() => abrirEdicao(condutor)}
                       title="Editar"
                     >
                       <Icon name="edit" />
@@ -450,21 +410,48 @@ export function ListarCondutores() {
           </div>
         )}
 
-        {/* Modais CRUD */}
-        <CondutorCRUD
-          viewModalOpen={modalVisualizacao}
-          formModalOpen={modalFormulario}
-          deleteModalOpen={modalExclusao}
-          selectedCondutor={condutorAtual}
-          isEdit={modoEdicao}
-          onViewClose={fecharModais}
-          onFormClose={fecharModais}
-          onDeleteClose={fecharModais}
-          onSave={handleSave}
-          onEdit={abrirModalEdicao}
-          onDelete={handleDelete}
-          saving={salvando}
-          deleting={excluindo}
+        {/* Modal de visualização */}
+        <GenericViewModal
+          isOpen={modalVisualizacao}
+          onClose={fecharModais}
+          item={condutorAtual}
+          title={condutorConfig.view.title}
+          subtitle={condutorConfig.view.subtitle}
+          headerIcon={condutorConfig.view.headerIcon}
+          headerColor={condutorConfig.view.headerColor}
+          sections={condutorAtual ? condutorConfig.view.getSections(condutorAtual) : []}
+          actions={
+            condutorAtual
+              ? [
+                  {
+                    label: 'Editar Condutor',
+                    icon: 'edit',
+                    variant: 'warning' as const,
+                    onClick: () => {
+                      fecharModais();
+                      abrirEdicao(condutorAtual);
+                    }
+                  }
+                ]
+              : []
+          }
+          statusConfig={condutorAtual ? condutorConfig.view.getStatusConfig?.(condutorAtual) : undefined}
+          idField={condutorConfig.view.idField}
+        />
+
+        {/* Modal de exclusão */}
+        <ConfirmDeleteModal
+          isOpen={modalExclusao}
+          title="Excluir Condutor"
+          message="Tem certeza de que deseja excluir este condutor?"
+          itemName={
+            condutorAtual
+              ? `${condutorAtual.nome} (${formatCPF(condutorAtual.cpf)})`
+              : ''
+          }
+          onConfirm={handleDelete}
+          onClose={fecharModais}
+          loading={excluindo}
         />
       </div>
     </div>

@@ -1,0 +1,54 @@
+{
+  "project": {
+    "name": "Sistema MDF-e",
+    "description": "Sistema completo para emissão e gerenciamento de MDF-e",
+    "type": "fullstack",
+    "backend": {
+      "technology": ".NET 8",
+      "url": "https://localhost:5001",
+      "swagger": "https://localhost:5001/swagger",
+      "database": "SQL Server"
+    },
+    "frontend": {
+      "technology": "React 18 + TypeScript",
+      "url": "http://localhost:3000",
+      "framework": "Create React App"
+    }
+  },
+  "testCases": [
+    {
+      "name": "API Health Check",
+      "type": "api",
+      "endpoint": "https://localhost:5001/health",
+      "method": "GET",
+      "expected": 200
+    },
+    {
+      "name": "Municipios Endpoint",
+      "type": "api",
+      "endpoint": "https://localhost:5001/api/Municipios",
+      "method": "GET",
+      "expected": 200,
+      "expectedResponse": {
+        "items": [],
+        "totalItems": 0,
+        "page": 1,
+        "pageSize": 10
+      }
+    },
+    {
+      "name": "Emitentes Endpoint",
+      "type": "api",
+      "endpoint": "https://localhost:5001/api/Emitentes",
+      "method": "GET",
+      "expected": 200
+    },
+    {
+      "name": "Swagger Documentation",
+      "type": "api",
+      "endpoint": "https://localhost:5001/swagger",
+      "method": "GET",
+      "expected": 200
+    }
+  ]
+}

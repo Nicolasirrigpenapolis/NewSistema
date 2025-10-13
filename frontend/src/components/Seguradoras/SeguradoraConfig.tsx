@@ -1,5 +1,4 @@
-import { CRUDConfig } from '../../types/modal';
-import { formatCNPJ } from '../../utils/formatters';
+import { CRUDConfig, FormSection } from '../../types/modal';
 
 export interface SeguradoraFormData {
   cnpj: string;
@@ -11,123 +10,87 @@ export interface SeguradoraFormData {
 
 export const seguradoraConfig: CRUDConfig<SeguradoraFormData> = {
   entity: {
-    name: 'seguradora',
-    pluralName: 'seguradoras',
+    name: 'Seguradora',
+    pluralName: 'Seguradoras',
     idField: 'id'
   },
-
-  view: {
-    title: 'Visualizar Seguradora',
-    subtitle: 'Detalhes completos da seguradora',
-    headerIcon: 'shield-alt',
-    headerColor: 'linear-gradient(to right, #0d9488, #0891b2)',
-
-    getSections: (seguradora) => [
-      {
-        title: 'Dados Principais',
-        subtitle: 'Informações da seguradora',
-        icon: 'shield-alt',
-        color: '#0d9488',
-        bgColor: '#FFFBEB',
-        fields: [
-          {
-            label: 'CNPJ',
-            value: seguradora.cnpj ? formatCNPJ(seguradora.cnpj) : undefined,
-            type: 'text'
-          },
-          {
-            label: 'Razão Social',
-            value: seguradora.razaoSocial,
-            type: 'text'
-          },
-          {
-            label: 'Nome Fantasia',
-            value: seguradora.nomeFantasia,
-            type: 'text',
-            show: !!seguradora.nomeFantasia
-          },
-          {
-            label: 'Apólice',
-            value: seguradora.apolice,
-            type: 'text',
-            show: !!seguradora.apolice
-          }
-        ]
-      }
-    ],
-
-    getStatusConfig: (seguradora) => ({
-      value: seguradora.ativo ? 'Ativa' : 'Inativa',
-      color: seguradora.ativo ? '#059669' : '#DC2626',
-      bgColor: seguradora.ativo ? '#ECFDF5' : '#FEF2F2',
-      textColor: seguradora.ativo ? '#065F46' : '#991B1B'
-    }),
-
-    idField: 'id'
-  },
-
   form: {
     title: 'Nova Seguradora',
     editTitle: 'Editar Seguradora',
     subtitle: 'Cadastre uma nova seguradora',
-    editSubtitle: 'Edite os dados da seguradora',
+    editSubtitle: 'Atualize os dados da seguradora',
     headerIcon: 'shield-alt',
-    headerColor: 'linear-gradient(to right, #0d9488, #0891b2)',
-
-    getSections: (seguradora) => [
+    headerColor: '#10b981',
+    defaultValues: {
+      cnpj: '',
+      razaoSocial: '',
+      nomeFantasia: '',
+      apolice: '',
+      ativo: true
+    },
+    getSections: (item?: SeguradoraFormData): FormSection[] => [
       {
-        title: 'Dados Principais',
-        subtitle: 'Informações da seguradora',
+        title: 'Dados da Seguradora',
+        subtitle: 'Informações principais',
         icon: 'shield-alt',
-        color: '#0d9488',
-        bgColor: '#FFFBEB',
+        color: '#10b981',
+        bgColor: '#d1fae5',
+        columns: 2,
         fields: [
           {
             key: 'cnpj',
             label: 'CNPJ',
-            type: 'cnpj',
+            type: 'text',
             required: true,
-            placeholder: '00.000.000/0000-00',
-            autoFetch: true,
-            validation: (value) => {
-              if (!value) return 'CNPJ é obrigatório';
-              const cnpjLimpo = value.replace(/\D/g, '');
-              return cnpjLimpo.length === 14 ? null : 'CNPJ deve ter 14 dígitos';
-            }
+            placeholder: '00.000.000/0000-00'
           },
           {
             key: 'razaoSocial',
             label: 'Razão Social',
             type: 'text',
             required: true,
-            placeholder: 'Razão social da seguradora',
-            maxLength: 100,
-            validation: (value) => {
-              if (!value) return 'Razão social é obrigatória';
-              if (value.length < 3) return 'Razão social deve ter pelo menos 3 caracteres';
-              return null;
-            }
+            placeholder: 'Nome da seguradora',
+            colSpan: 2
           },
           {
             key: 'nomeFantasia',
             label: 'Nome Fantasia',
             type: 'text',
-            placeholder: 'Nome fantasia (opcional)',
-            maxLength: 100
+            placeholder: 'Nome fantasia',
+            colSpan: 2
           },
           {
             key: 'apolice',
             label: 'Apólice',
             type: 'text',
-            placeholder: 'Número da apólice (opcional)',
-            maxLength: 50
+            placeholder: 'Número da apólice',
+            colSpan: 2
           }
         ]
       }
-    ],
-
-    defaultValues: {
-      ativo: true
-    }
+    ]
+  },
+  view: {
+    title: 'Detalhes da Seguradora',
+    subtitle: 'Visualização completa',
+    headerIcon: 'shield-alt',
+    headerColor: '#10b981',
+    idField: 'id',
+    getSections: (item: any) => [
+      {
+        title: 'Informações da Seguradora',
+        icon: 'shield-alt',
+        color: '#10b981',
+        bgColor: '#d1fae5',
+        columns: 2,
+        fields: [
+          { label: 'CNPJ', value: item.cnpj },
+          { label: 'Razão Social', value: item.razaoSocial, colSpan: 2 },
+          { label: 'Nome Fantasia', value: item.nomeFantasia || 'N/A', colSpan: 2 },
+          { label: 'Apólice', value: item.apolice || 'N/A' },
+          { label: 'Status', value: item.ativo ? 'Ativo' : 'Inativo' }
+        ]
+      }
+    ]
   }
 };

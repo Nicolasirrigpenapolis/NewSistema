@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
-import { Button } from '../../../components/UI/button';
-import { Input } from '../../../components/UI/input';
-import { Label } from '../../../components/UI/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/UI/card';
+import { Button, Input, Label, Card, CardHeader, CardContent, CardTitle, CardDescription } from '../../../ui'
 import { Truck, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface LoginForm {

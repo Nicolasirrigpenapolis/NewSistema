@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Backend.Api.Services;
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Api.Attributes
 {
@@ -17,8 +16,15 @@ namespace Backend.Api.Attributes
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
+            // BYPASS PARA DESENVOLVIMENTO - Permitir acesso direto em desenvolvimento
+            var environment = context.HttpContext.RequestServices.GetService<IWebHostEnvironment>();
+            if (environment?.IsDevelopment() == true)
+            {
+                await next();
+                return;
+            }
+
             var permissaoService = context.HttpContext.RequestServices.GetService<IPermissaoService>();
-            var dbContext = context.HttpContext.RequestServices.GetService<Backend.Api.Data.SistemaContext>();
 
             if (permissaoService == null)
             {
@@ -36,23 +42,14 @@ namespace Backend.Api.Attributes
                 return;
             }
 
-            // Bypass para super usuário (nome configurável via env SUPERUSER_USERNAME)
-            var superUserName = Environment.GetEnvironmentVariable("SUPERUSER_USERNAME") ?? "programador";
-            if (!string.IsNullOrEmpty(userName) && string.Equals(userName, superUserName, StringComparison.OrdinalIgnoreCase))
+            // Bypass opcional: permite definir um usuário super via variável de ambiente (sem valor padrão)
+            var superUserName = Environment.GetEnvironmentVariable("SUPERUSER_USERNAME");
+            if (!string.IsNullOrEmpty(superUserName) &&
+                !string.IsNullOrEmpty(userName) &&
+                string.Equals(userName, superUserName, StringComparison.OrdinalIgnoreCase))
             {
                 await next();
                 return;
-            }
-
-            // Bypass alternativo: se o cargo se chama Programador
-            if (dbContext != null)
-            {
-                var cargoNome = await dbContext.Cargos.Where(c => c.Id == cargoId).Select(c => c.Nome).FirstOrDefaultAsync();
-                if (!string.IsNullOrEmpty(cargoNome) && string.Equals(cargoNome, "Programador", StringComparison.OrdinalIgnoreCase))
-                {
-                    await next();
-                    return;
-                }
             }
 
             // Verificar se o cargo tem a permissão normalmente

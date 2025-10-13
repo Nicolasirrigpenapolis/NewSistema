@@ -3,6 +3,8 @@ using Backend.Api.Providers.MDFe.Native;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Runtime.InteropServices;
+using System.IO;
 using System.Text;
 
 namespace Backend.Api.Providers.MDFe;
@@ -19,6 +21,11 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
     private readonly AcbrConfigManager _configManager;
     private bool _initialized = false;
     private bool _disposed = false;
+    private bool _nativeLibraryLoaded = false;
+
+    // Controle global estático para evitar múltiplas inicializações da biblioteca nativa
+    private static volatile bool _globalLibraryInitialized = false;
+    private static readonly object _lockObject = new object();
 
     public AcbrLibMDFeProvider(
         ILogger<AcbrLibMDFeProvider> logger,
@@ -33,6 +40,36 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
         Inicializar();
     }
 
+    private void EnsureNativeLibraryLoaded()
+    {
+        if (_nativeLibraryLoaded)
+        {
+            return;
+        }
+
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var dllName = Environment.Is64BitProcess ? "ACBrMDFe64.dll" : "ACBrMDFe32.dll";
+        var nativeDir = Path.Combine(baseDir, "Native");
+        var dllPath = Path.Combine(nativeDir, dllName);
+
+        if (File.Exists(dllPath))
+        {
+            NativeLibrary.Load(dllPath);
+            _logger.LogInformation("[AcbrLibMDFe] Biblioteca nativa carregada de {Path}", dllPath);
+            _nativeLibraryLoaded = true;
+            return;
+        }
+
+        if (NativeLibrary.TryLoad(dllName, out _))
+        {
+            _logger.LogInformation("[AcbrLibMDFe] Biblioteca nativa {Dll} carregada via PATH.", dllName);
+            _nativeLibraryLoaded = true;
+            return;
+        }
+
+        throw new FileNotFoundException($"Não foi possível localizar a biblioteca nativa {dllName}. Copie o arquivo para {nativeDir} ou configure o PATH.");
+    }
+
     #region Inicialização e Controle
 
     private void Inicializar()
@@ -41,19 +78,34 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
         {
             _logger.LogInformation("[AcbrLibMDFe] Iniciando biblioteca...");
 
+            EnsureNativeLibraryLoaded();
+
             // Gerar arquivo de configuração ACBrLib.ini
             _configManager.GerarConfiguracao();
             _configManager.CopiarSchemas();
 
             _logger.LogInformation("[AcbrLibMDFe] Config path: {Path}", _configManager.ConfigPath);
 
-            // Inicializar biblioteca
-            var ret = AcbrLibMDFeNative.MDFE_Inicializar(_configManager.ConfigPath, "");
-
-            if (!AcbrLibMDFeNative.IsSuccess(ret))
+            // Inicializar biblioteca (apenas uma vez globalmente)
+            lock (_lockObject)
             {
-                var erro = ObterUltimoErro();
-                throw new Exception($"Falha ao inicializar ACBrLibMDFe: código {ret}, erro: {erro}");
+                if (!_globalLibraryInitialized)
+                {
+                    var ret = AcbrLibMDFeNative.MDFE_Inicializar(_configManager.ConfigPath, "");
+
+                    if (!AcbrLibMDFeNative.IsSuccess(ret))
+                    {
+                        var erro = ObterUltimoErro();
+                        throw new Exception($"Falha ao inicializar ACBrLibMDFe: código {ret}, erro: {erro}");
+                    }
+
+                    _globalLibraryInitialized = true;
+                    _logger.LogInformation("[AcbrLibMDFe] Biblioteca inicializada globalmente");
+                }
+                else
+                {
+                    _logger.LogInformation("[AcbrLibMDFe] Biblioteca já inicializada - reutilizando instância global");
+                }
             }
 
             _initialized = true;
@@ -182,15 +234,7 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
                 await _context.SaveChangesAsync();
             }
 
-            return ProviderResult<object>.Ok(new
-            {
-                transmissao.Sucesso,
-                transmissao.Protocolo,
-                transmissao.CodigoStatus,
-                transmissao.MotivoStatus,
-                transmissao.ChaveMDFe,
-                transmissao.NumeroRecibo
-            });
+            return ProviderResult<object>.Ok(transmissao);
         }
         catch (Exception ex)
         {
@@ -696,15 +740,16 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
 
         try
         {
-            if (_initialized)
+            // Não finalizamos a biblioteca nativa aqui pois ela é compartilhada globalmente
+            // A finalização acontecerá apenas no shutdown da aplicação
+            if (_initialized && _nativeLibraryLoaded)
             {
-                _logger.LogInformation("[AcbrLibMDFe] Finalizando biblioteca...");
-                AcbrLibMDFeNative.MDFE_Finalizar();
+                _logger.LogInformation("[AcbrLibMDFe] Liberando instância (biblioteca global permanece ativa)");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[AcbrLibMDFe] Erro ao finalizar biblioteca");
+            _logger.LogError(ex, "[AcbrLibMDFe] Erro geral ao finalizar biblioteca");
         }
         finally
         {

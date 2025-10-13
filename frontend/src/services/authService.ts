@@ -295,37 +295,6 @@ class AuthService {
   }
 
 
-  /**
-   * Validar força da senha
-   */
-  validatePassword(password: string): {
-    isValid: boolean;
-    errors: string[];
-  } {
-    const errors: string[] = [];
-
-    if (password.length < 6) {
-      errors.push('Senha deve ter pelo menos 6 caracteres');
-    }
-
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Senha deve conter pelo menos uma letra maiúscula');
-    }
-
-    if (!/[a-z]/.test(password)) {
-      errors.push('Senha deve conter pelo menos uma letra minúscula');
-    }
-
-    if (!/\d/.test(password)) {
-      errors.push('Senha deve conter pelo menos um número');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  }
-
 
   /**
    * Obter estatísticas da sessão

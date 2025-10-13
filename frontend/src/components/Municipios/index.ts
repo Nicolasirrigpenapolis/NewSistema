@@ -1,0 +1,1 @@
+export { municipioConfig } from './MunicipioConfig';

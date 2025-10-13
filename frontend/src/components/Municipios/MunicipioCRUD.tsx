@@ -97,7 +97,7 @@ export function MunicipioCRUD({
         subtitle={isEdit ? (municipioConfig.form.editSubtitle || municipioConfig.form.subtitle) : municipioConfig.form.subtitle}
         headerIcon={municipioConfig.form.headerIcon}
         headerColor={municipioConfig.form.headerColor}
-        sections={getFormSections(selectedMunicipio)}
+        sections={getFormSections(selectedMunicipio || undefined)}
         loading={saving}
       />
 
@@ -111,7 +111,7 @@ export function MunicipioCRUD({
           : ''
         }
         onConfirm={onDelete}
-        onCancel={onDeleteClose}
+        onClose={onDeleteClose}
         loading={deleting}
       />
     </>

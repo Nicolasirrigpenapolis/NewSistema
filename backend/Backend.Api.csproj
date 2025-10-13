@@ -31,4 +31,16 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Templates\modeloini.ini" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\docs\ACBrLibMDFe-Windows-1.2.2.339\Windows\MT\Cdecl\ACBrMDFe64.dll" Link="Native\ACBrMDFe64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\docs\ACBrLibMDFe-Windows-1.2.2.339\dep\ACBrMDFeServicos.ini" Link="Native\ACBrMDFeServicos.ini">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

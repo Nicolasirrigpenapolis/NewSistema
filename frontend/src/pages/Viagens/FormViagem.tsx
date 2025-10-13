@@ -3,8 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { viagensService, Viagem, DespesaViagem, ReceitaViagem, TodosTiposDespesa } from '../../services/viagensService';
 import { entitiesService } from '../../services/entitiesService';
 import { EntityOption } from '../../types/apiResponse';
-import Icon from '../../components/UI/Icon';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/card';
+import { Icon, Card, CardContent, CardHeader, CardTitle } from '../../ui';
 
 export function FormViagem() {
   const navigate = useNavigate();

@@ -52,7 +52,7 @@ export interface GenericViewModalProps<T = any> {
     fieldKey: string;
     label: string;
   }>;
-  config?: ModalConfig<T>;
+  config?: ModalConfig<T> | CRUDConfig<T>;
   onEdit?: () => void;
 }
 
@@ -105,10 +105,13 @@ export interface GenericFormModalProps<T = any> {
   loading?: boolean;
   isEdit?: boolean;
   isEditing?: boolean;
-  config?: ModalConfig<T>;
+  config?: ModalConfig<T> | CRUDConfig<T>;
   onCancel?: () => void;
   onFieldChange?: (name: string, value: any) => void;
   customStates?: any;
+  submitLabel?: string;
+  cancelLabel?: string;
+  hideCancelButton?: boolean;
 }
 
 export interface ViewModalConfig<T = any> {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Icon from '../../../components/UI/Icon';
-import { Button } from '../../../components/UI/button';
+import { Icon, Button } from '../../../ui';
 import { manutencoesService, ManutencaoListItem } from '../../../services/manutencoesService';
 
 interface Paginacao {

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { MunicipioCRUD } from '../../../components/Municipios/MunicipioCRUD';
+import { useNavigate } from 'react-router-dom';
 import { ImportarIBGEModal } from '../../../components/Municipios/ImportarIBGEModal';
-import Icon from '../../../components/UI/Icon';
+import { Icon } from '../../../ui';
+import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
+import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
+import { municipioConfig } from '../../../components/Municipios/MunicipioConfig';
 
 interface Municipio {
   id?: number;
@@ -24,6 +27,7 @@ interface FiltrosMunicipios {
 }
 
 export function ListarMunicipios() {
+  const navigate = useNavigate();
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const [carregando, setCarregando] = useState(false);
 
@@ -49,18 +53,17 @@ export function ListarMunicipios() {
     totalPages: 0
   });
 
-  // Estados dos modais CRUD
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [formModalOpen, setFormModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedMunicipio, setSelectedMunicipio] = useState<Municipio | null>(null);
-  const [isEdit, setIsEdit] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  // Estados de visualizaÁ„o e exclus„o
+  const [municipioVisualizacao, setMunicipioVisualizacao] = useState<Municipio | null>(null);
+  const [municipioExclusao, setMunicipioExclusao] = useState<Municipio | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
   const [importandoIBGE, setImportandoIBGE] = useState(false);
 
-  // Estados do modal de importa√ß√£o
+  // Estado do modal de importaÁ„o
   const [modalImportacao, setModalImportacao] = useState(false);
+
+
+  // Estados do modal de importa√ß√£o
 
   useEffect(() => {
     carregarMunicipios();
@@ -163,159 +166,113 @@ export function ListarMunicipios() {
     setPaginacao(prev => ({ ...prev, current: 1 }));
   };
 
-  const abrirModalNovo = () => {
-    setSelectedMunicipio(null);
-    setIsEdit(false);
-    setFormModalOpen(true);
-  };
+  const abrirVisualizacao = (municipio: Municipio) => {
+  setMunicipioVisualizacao(municipio);
+};
 
-  const abrirModalEdicao = (municipio: Municipio) => {
-    setSelectedMunicipio(municipio);
-    setIsEdit(true);
-    setFormModalOpen(true);
-  };
+const fecharVisualizacao = () => {
+  setMunicipioVisualizacao(null);
+};
 
-  const abrirModalVisualizacao = (municipio: Municipio) => {
-    setSelectedMunicipio(municipio);
-    setViewModalOpen(true);
-  };
+const navegarParaNovo = () => {
+  navigate('/municipios/novo');
+};
 
-  const abrirModalExclusao = (municipio: Municipio) => {
-    setSelectedMunicipio(municipio);
-    setDeleteModalOpen(true);
-  };
+const navegarParaEdicao = (municipio: Municipio) => {
+  if (!municipio.id) {
+    navigate('/municipios/novo');
+    return;
+  }
 
-  const fecharModais = () => {
-    setViewModalOpen(false);
-    setFormModalOpen(false);
-    setDeleteModalOpen(false);
-    setSelectedMunicipio(null);
-    setIsEdit(false);
-    setSaving(false);
-    setDeleting(false);
-  };
+  navigate(`/municipios/${municipio.id}/editar`, { state: { municipio } });
+};
 
-  const salvarMunicipio = async (data: Municipio) => {
-    try {
-      setSaving(true);
+const abrirModalImportacao = () => {
+  setModalImportacao(true);
+};
 
-      const url = isEdit && data.id
-        ? `https://localhost:5001/api/municipios/${data.id}`
-        : 'https://localhost:5001/api/municipios';
+const fecharModalImportacao = () => {
+  if (!importandoIBGE) {
+    setModalImportacao(false);
+  }
+};
 
-      const method = isEdit && data.id ? 'PUT' : 'POST';
+const abrirModalExclusao = (municipio: Municipio) => {
+  setMunicipioExclusao(municipio);
+};
 
-      console.log('Salvando munic√≠pio:', { url, method, data });
+const fecharModalExclusao = () => {
+  if (!excluindo) {
+    setMunicipioExclusao(null);
+  }
+  setExcluindo(false);
+};
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+const confirmarExclusao = async () => {
+  if (!municipioExclusao?.id) return;
 
-      console.log('Response status:', response.status);
+  try {
+    setExcluindo(true);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Erro da API:', errorText);
-        throw new Error(`Erro ao salvar munic√≠pio: ${errorText}`);
+    const response = await fetch(`https://localhost:5001/api/municipios/${municipioExclusao.id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Erro ao excluir municÌpio');
+    }
+
+    fecharModalExclusao();
+    carregarMunicipios();
+  } catch (error) {
+    console.error('Erro ao excluir municÌpio:', error);
+    alert('Erro ao excluir municÌpio. Tente novamente.');
+    setExcluindo(false);
+  }
+};
+
+const confirmarImportacao = async () => {
+  try {
+    setImportandoIBGE(true);
+
+    const response = await fetch('https://localhost:5001/api/municipios/importar-todos-ibge', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
       }
+    });
 
-      fecharModais();
-      await carregarMunicipios();
-    } catch (error) {
-      console.error('Erro ao salvar munic√≠pio:', error);
-      throw error;
-    } finally {
-      setSaving(false);
+    if (!response.ok) {
+      throw new Error('Erro ao importar municÌpios do IBGE');
     }
-  };
 
-  const excluirMunicipio = async () => {
-    if (!selectedMunicipio?.id) return;
+    const result = await response.json();
 
-    try {
-      setDeleting(true);
+    alert(`${result.municipiosImportados || 'Todos os'} municÌpios importados com sucesso!`);
+    carregarMunicipios();
+    setModalImportacao(false);
+  } catch (error) {
+    console.error('Erro ao importar municÌpios do IBGE:', error);
+    alert('Erro ao importar municÌpios do IBGE. Tente novamente.');
+  } finally {
+    setImportandoIBGE(false);
+  }
+};
 
-      const response = await fetch(`https://localhost:5001/api/municipios/${selectedMunicipio.id}`, {
-        method: 'DELETE',
-      });
+const alterarPagina = (novaPagina: number) => {
+  setPaginacao(prev => ({ ...prev, current: novaPagina }));
+};
 
-      if (!response.ok) {
-        throw new Error('Erro ao excluir munic√≠pio');
-      }
+const alterarTamanhoPagina = (novoTamanho: number) => {
+  setPaginacao(prev => ({
+    ...prev,
+    pageSize: novoTamanho,
+    current: 1
+  }));
+};
 
-      fecharModais();
-      carregarMunicipios();
-    } catch (error) {
-      console.error('Erro ao excluir munic√≠pio:', error);
-      throw error;
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const alterarPagina = (novaPagina: number) => {
-    setPaginacao(prev => ({ ...prev, current: novaPagina }));
-  };
-
-  const alterarTamanhoPagina = (novoTamanho: number) => {
-    setPaginacao(prev => ({
-      ...prev,
-      pageSize: novoTamanho,
-      current: 1
-    }));
-  };
-
-  const editarDoModal = (municipio: Municipio) => {
-    setViewModalOpen(false);
-    abrirModalEdicao(municipio);
-  };
-
-  const abrirModalImportacao = () => {
-    setModalImportacao(true);
-  };
-
-  const fecharModalImportacao = () => {
-    if (!importandoIBGE) {
-      setModalImportacao(false);
-    }
-  };
-
-  const confirmarImportacao = async () => {
-    try {
-      setImportandoIBGE(true);
-
-      // Chamar a API do backend para importar munic√≠pios do IBGE
-      const response = await fetch('https://localhost:5001/api/municipios/importar-todos-ibge', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao importar munic√≠pios do IBGE');
-      }
-
-      const result = await response.json();
-
-      alert(`${result.municipiosImportados || 'Todos os'} munic√≠pios importados com sucesso!`);
-      carregarMunicipios();
-
-      // Fechar modal
-      setModalImportacao(false);
-    } catch (error) {
-      console.error('Erro ao importar munic√≠pios do IBGE:', error);
-      alert('Erro ao importar munic√≠pios do IBGE. Tente novamente.');
-    } finally {
-      setImportandoIBGE(false);
-    }
-  };
-
-  if (carregando) {
+if (carregando) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-center py-16">
@@ -352,7 +309,7 @@ export function ListarMunicipios() {
             </button>
             <button
               className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-              onClick={abrirModalNovo}
+              onClick={navegarParaNovo}
             >
               <i className="fas fa-plus text-lg"></i>
               <span>Novo Munic√≠pio</span>
@@ -474,14 +431,14 @@ export function ListarMunicipios() {
                 <div className="flex items-center justify-center gap-2">
                   <button
                     className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200"
-                    onClick={() => abrirModalVisualizacao(municipio)}
+                    onClick={() => abrirVisualizacao(municipio)}
                     title="Visualizar"
                   >
                     <Icon name="eye" />
                   </button>
                   <button
                     className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
-                    onClick={() => abrirModalEdicao(municipio)}
+                    onClick={() => navegarParaEdicao(municipio)}
                     title="Editar"
                   >
                     <Icon name="edit" />
@@ -548,20 +505,37 @@ export function ListarMunicipios() {
       )}
 
       {/* Componente de CRUD de Munic√≠pios */}
-      <MunicipioCRUD
-        viewModalOpen={viewModalOpen}
-        formModalOpen={formModalOpen}
-        deleteModalOpen={deleteModalOpen}
-        selectedMunicipio={selectedMunicipio}
-        isEdit={isEdit}
-        onViewClose={() => setViewModalOpen(false)}
-        onFormClose={() => setFormModalOpen(false)}
-        onDeleteClose={() => setDeleteModalOpen(false)}
-        onSave={salvarMunicipio}
-        onEdit={editarDoModal}
-        onDelete={excluirMunicipio}
-        saving={saving}
-        deleting={deleting}
+            <GenericViewModal
+        isOpen={!!municipioVisualizacao}
+        onClose={fecharVisualizacao}
+        item={municipioVisualizacao}
+        title={municipioConfig.view.title}
+        subtitle={municipioConfig.view.subtitle}
+        headerIcon={municipioConfig.view.headerIcon}
+        headerColor={municipioConfig.view.headerColor}
+        sections={municipioVisualizacao ? municipioConfig.view.getSections(municipioVisualizacao) : []}
+        actions={municipioVisualizacao ? [{
+          label: 'Editar MunicÌpio',
+          icon: 'edit',
+          variant: 'warning' as const,
+          onClick: () => {
+            if (municipioVisualizacao) {
+              fecharVisualizacao();
+              navegarParaEdicao(municipioVisualizacao);
+            }
+          },
+        }] : []}
+        statusConfig={municipioVisualizacao ? municipioConfig.view.getStatusConfig?.(municipioVisualizacao) : undefined}
+        idField={municipioConfig.view.idField}
+      />
+      <ConfirmDeleteModal
+        isOpen={!!municipioExclusao}
+        title="Excluir MunicÌpio"
+        message="Tem certeza de que deseja excluir este municÌpio?"
+        itemName={municipioExclusao ? `${municipioExclusao.nome}/${municipioExclusao.uf}` : ''}
+        onConfirm={confirmarExclusao}
+        onClose={fecharModalExclusao}
+        loading={excluindo}
       />
 
       {/* Modal de Importa√ß√£o IBGE */}

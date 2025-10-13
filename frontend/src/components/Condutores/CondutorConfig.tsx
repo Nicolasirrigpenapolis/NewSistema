@@ -1,158 +1,78 @@
-import { CRUDConfig } from '../../types/modal';
-import { formatCPF } from '../../utils/formatters';
+import { CRUDConfig, FormSection } from '../../types/modal';
 
-interface Condutor {
-  id?: number;
-  nome: string;
-  cpf: string;
-  telefone?: string;
-  ativo?: boolean;
-}
-
-export const condutorConfig: CRUDConfig<Condutor> = {
+export const condutorConfig: CRUDConfig<any> = {
   entity: {
-    name: 'condutor',
-    pluralName: 'condutores',
+    name: 'Condutor',
+    pluralName: 'Condutores',
     idField: 'id'
   },
-
-  view: {
-    title: 'Visualizar Condutor',
-    subtitle: 'Detalhes do condutor',
-    headerIcon: 'user',
-    headerColor: 'linear-gradient(to right, #16a34a, #059669)',
-
-    getSections: (condutor) => [
-      {
-        title: 'Dados Pessoais',
-        subtitle: 'Informações do condutor',
-        icon: 'id-card',
-        color: '#16a34a',
-        bgColor: '#dcfce7',
-        columns: 1,
-        fields: [
-          {
-            label: 'Nome Completo',
-            value: condutor.nome,
-            icon: 'user'
-          },
-          {
-            label: 'CPF',
-            value: condutor.cpf,
-            icon: 'id-card',
-            formatter: (value) => value ? formatCPF(value) : 'N/A'
-          },
-          {
-            label: 'Telefone',
-            value: condutor.telefone || 'Não informado',
-            icon: 'phone'
-          },
-          {
-            label: 'Status',
-            value: condutor.ativo ? 'Ativo' : 'Inativo',
-            icon: 'circle',
-            type: 'status'
-          }
-        ]
-      }
-    ],
-
-    getStatusConfig: (condutor) => ({
-      value: condutor.ativo ? 'Ativo' : 'Inativo',
-      color: condutor.ativo ? '#059669' : '#dc2626',
-      bgColor: condutor.ativo ? '#dcfce7' : '#fee2e2',
-      textColor: condutor.ativo ? '#166534' : '#991b1b'
-    }),
-
-    idField: 'id'
-  },
-
   form: {
     title: 'Novo Condutor',
     editTitle: 'Editar Condutor',
     subtitle: 'Cadastre um novo condutor',
-    editSubtitle: 'Atualize as informações do condutor',
+    editSubtitle: 'Atualize os dados do condutor',
     headerIcon: 'user',
-    headerColor: 'linear-gradient(to right, #16a34a, #059669)',
-
+    headerColor: '#10b981',
     defaultValues: {
       nome: '',
       cpf: '',
       telefone: '',
       ativo: true
     },
-
-    getSections: (item) => [
+    getSections: (item?: any): FormSection[] => [
       {
         title: 'Dados Pessoais',
         subtitle: 'Informações do condutor',
-        icon: 'id-card',
-        color: '#16a34a',
-        bgColor: '#dcfce7',
-        columns: 1,
+        icon: 'user',
+        color: '#10b981',
+        bgColor: '#d1fae5',
+        columns: 2,
         fields: [
           {
             key: 'nome',
             label: 'Nome Completo',
             type: 'text',
-            icon: 'user',
-            placeholder: 'Nome completo do condutor',
             required: true,
-            maxLength: 100
+            placeholder: 'Digite o nome completo',
+            colSpan: 2
           },
           {
             key: 'cpf',
             label: 'CPF',
-            type: 'cpf',
-            icon: 'id-card',
-            placeholder: '000.000.000-00',
+            type: 'text',
             required: true,
-            validation: (value) => {
-              if (!value) return null;
-              const cleanCpf = value.replace(/\D/g, '');
-              if (cleanCpf.length !== 11) {
-                return 'CPF deve ter 11 dígitos';
-              }
-              return null;
-            }
+            placeholder: '000.000.000-00'
           },
           {
             key: 'telefone',
             label: 'Telefone',
-            type: 'telefone',
-            icon: 'phone',
-            placeholder: '(00) 00000-0000',
-            required: false
-          },
-          {
-            key: 'ativo',
-            label: 'Status Ativo',
-            type: 'checkbox',
-            icon: 'toggle-on',
-            placeholder: 'Condutor ativo no sistema',
-            show: !!item // Só mostrar no modo de edição
+            type: 'text',
+            placeholder: '(00) 00000-0000'
           }
         ]
       }
-    ],
-
-    validate: (data) => {
-      const errors: Record<string, string> = {};
-
-      if (!data.nome?.trim()) {
-        errors.nome = 'Nome é obrigatório';
+    ]
+  },
+  view: {
+    title: 'Detalhes do Condutor',
+    subtitle: 'Visualização completa',
+    headerIcon: 'user',
+    headerColor: '#10b981',
+    idField: 'id',
+    getSections: (item: any) => [
+      {
+        title: 'Informações Pessoais',
+        icon: 'user',
+        color: '#10b981',
+        bgColor: '#d1fae5',
+        columns: 2,
+        fields: [
+          { label: 'Nome', value: item.nome },
+          { label: 'CPF', value: item.cpf },
+          { label: 'Telefone', value: item.telefone || 'N/A' },
+          { label: 'Status', value: item.ativo ? 'Ativo' : 'Inativo' }
+        ]
       }
-
-      if (!data.cpf?.trim()) {
-        errors.cpf = 'CPF é obrigatório';
-      } else {
-        const cleanCpf = data.cpf.replace(/\D/g, '');
-        if (cleanCpf.length !== 11) {
-          errors.cpf = 'CPF deve ter 11 dígitos';
-        }
-      }
-
-      return errors;
-    }
+    ]
   }
 };

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Icon from '../../../components/UI/Icon';
+import { Icon } from '../../../ui';
 import { relatoriosService, RelatorioDespesasFiltro, RelatorioDespesasItem, PagedResult, TodosTiposDespesa } from '../../../services/relatoriosService';
 import { viagensService } from '../../../services/viagensService';
+import { GenericForm } from '../../../components/UI/feedback/GenericForm';
+import { getRelatorioDespesasFilterSections } from '../../../components/Relatorios/RelatorioDespesasFilterConfig';
 
 interface PaginationData {
   totalItems: number;
@@ -36,6 +38,35 @@ export function RelatorioFinanceiroViagens() {
     placa: '',
     tipoDespesa: ''
   });
+
+  const tipoDespesaOptions = useMemo(() => [
+    { value: '', label: 'Todos os tipos' },
+    ...TodosTiposDespesa.map(tipo => ({ value: tipo, label: tipo }))
+  ], []);
+
+  const filterSections = useMemo(() => getRelatorioDespesasFilterSections({
+    tipoDespesaOptions
+  }), [tipoDespesaOptions]);
+
+  const handleFilterSave = async (dados: typeof filtrosTemp) => {
+    const novoTemp = {
+      dataInicio: dados?.dataInicio || '',
+      dataFim: dados?.dataFim || '',
+      placa: dados?.placa || '',
+      tipoDespesa: dados?.tipoDespesa || ''
+    };
+
+    setFiltrosTemp(novoTemp);
+
+    setFiltros(prev => ({
+      ...prev,
+      page: 1,
+      dataInicio: novoTemp.dataInicio || undefined,
+      dataFim: novoTemp.dataFim || undefined,
+      placa: novoTemp.placa ? novoTemp.placa.trim() : undefined,
+      tipoDespesa: novoTemp.tipoDespesa || undefined
+    }));
+  };
 
   // Estados para paginação e resumo
   const [paginacao, setPaginacao] = useState<PaginationData | null>(null);
@@ -356,82 +387,68 @@ export function RelatorioFinanceiroViagens() {
         )}
 
         {/* Filtros */}
-        <div className="bg-card rounded-lg border border-gray-200 dark:border-0 p-6 mb-6">
-          <div className="grid grid-cols-6 gap-4 items-end">
+        <div className="mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Data Início</label>
-              <input
-                type="date"
-                value={filtrosTemp.dataInicio}
-                onChange={(e) => setFiltrosTemp({ ...filtrosTemp, dataInicio: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-              />
+              <h2 className="text-2xl font-bold text-foreground">Lancamento de Despesas e Receitas</h2>
+              <p className="text-muted-foreground mt-1">Acompanhe o fluxo financeiro de cada viagem e identifique pontos de atencao.</p>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Data Fim</label>
-              <input
-                type="date"
-                value={filtrosTemp.dataFim}
-                onChange={(e) => setFiltrosTemp({ ...filtrosTemp, dataFim: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 ${
-                  datasInvalidas ? 'border-red-500' : 'border-gray-300 dark:border-0'
-                }`}
-              />
-              {datasInvalidas && (
-                <p className="text-xs text-red-500 mt-1">Data fim deve ser maior que data início</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Placa</label>
-              <input
-                type="text"
-                placeholder="Ex: ABC-1234"
-                value={filtrosTemp.placa}
-                onChange={(e) => setFiltrosTemp({ ...filtrosTemp, placa: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Tipo Despesa</label>
-              <select
-                value={filtrosTemp.tipoDespesa}
-                onChange={(e) => setFiltrosTemp({ ...filtrosTemp, tipoDespesa: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-              >
-                <option value="">Todos os tipos</option>
-                {TodosTiposDespesa.map(tipo => (
-                  <option key={tipo} value={tipo}>{tipo}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
+            <div className="flex flex-wrap items-center gap-3">
               <button
-                onClick={aplicarFiltros}
-                disabled={datasInvalidas}
-                className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => navigate('/viagens/nova')}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shadow-lg hover:shadow-xl"
               >
-                <Icon name="search" />
-                Filtrar
+                <Icon name="plus" size="sm" />
+                Novo Lancamento
               </button>
-            </div>
-
-            <div>
-              <button
-                onClick={limparFiltros}
-                disabled={!temFiltrosAtivos}
-                className="w-full px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-200 dark:border-red-800 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Icon name="times" />
-                Limpar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={exportarExcel}
+                  disabled={exportando === 'excel'}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-card text-foreground hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Icon name={exportando === 'excel' ? 'spinner' : 'file-excel'} size="sm" className={exportando === 'excel' ? 'animate-spin' : ''} />
+                  Exportar Excel
+                </button>
+                <button
+                  onClick={exportarPdf}
+                  disabled={exportando === 'pdf'}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-card text-foreground hover:bg-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Icon name={exportando === 'pdf' ? 'spinner' : 'file-pdf'} size="sm" className={exportando === 'pdf' ? 'animate-spin' : ''} />
+                  Exportar PDF
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
+          <GenericForm
+            data={filtrosTemp}
+            sections={filterSections}
+            title="Filtros do Relatorio"
+            subtitle="Refine os resultados com filtros rapidos."
+            headerIcon="sliders-h"
+            headerColor="linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)"
+            onSave={handleFilterSave}
+            onCancel={limparFiltros}
+            onFieldChange={(field, value) => {
+              setFiltrosTemp(prev => ({
+                ...prev,
+                [field]: value ?? ''
+              }));
+            }}
+            submitLabel="Filtrar"
+            cancelLabel="Limpar filtros"
+            hideCancelButton={false}
+            loading={datasInvalidas}
+            pageClassName="max-w-6xl mx-auto"
+          />
+          {datasInvalidas && (
+            <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+              Data fim deve ser maior que data inicio.
+            </div>
+          )}
+        </div>
         {/* Indicador de filtros ativos */}
         {temFiltrosAtivos && (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">

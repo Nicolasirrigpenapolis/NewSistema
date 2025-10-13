@@ -4,8 +4,7 @@ import { manutencoesService, Manutencao, ManutencaoPeca, UnidadesMedida } from '
 import { entitiesService } from '../../services/entitiesService';
 import { fornecedoresService } from '../../services/fornecedoresService';
 import { EntityOption } from '../../types/apiResponse';
-import Icon from '../../components/UI/Icon';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/card';
+import { Icon, Card, CardContent, CardHeader, CardTitle } from '../../ui';
 
 export function FormManutencao() {
   const navigate = useNavigate();

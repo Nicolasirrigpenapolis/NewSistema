@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { mdfeService } from '../../../services/mdfeService';
 import { entitiesService } from '../../../services/entitiesService';
-import { MDFeData, EntidadesCarregadas } from '../../../types/mdfe';
+import { MDFeData, EntidadesCarregadas, MdfeTransmissaoResponse } from '../../../types/mdfe';
 import { MDFeForm } from '../../../components/UI/Forms/MDFeForm';
 import { ErrorDisplay } from '../../../components/UI/ErrorDisplay/ErrorDisplay';
 
@@ -269,12 +269,29 @@ export function FormularioMDFe() {
       const resultadoTransmissao = await mdfeService.transmitirMDFe(parseInt(id));
 
       if (resultadoTransmissao.sucesso) {
-        setMensagemSucesso('MDFe transmitido com sucesso para a SEFAZ!');
-        setTimeout(() => navigate('/mdfes'), 2000);
+        const detalhes = resultadoTransmissao.dados as MdfeTransmissaoResponse | undefined;
+        const protocolo = detalhes?.protocolo ?? '---';
+        const status = detalhes?.codigoStatus ?? '---';
+        const motivo = detalhes?.motivoStatus ?? 'Status não informado';
+
+        setMensagemSucesso(`MDFe autorizado (cStat ${status}) - ${motivo}. Protocolo: ${protocolo}`);
+        if (detalhes?.chaveMDFe) {
+          setDados(prev => ({
+            ...prev,
+            chaveAcesso: detalhes.chaveMDFe
+          }));
+        }
+        setTimeout(() => navigate('/mdfes'), 3000);
       } else {
+        const detalhes = resultadoTransmissao.dados as MdfeTransmissaoResponse | undefined;
         console.error('TRANSMITIR - ERRO NA TRANSMISSÃO:', resultadoTransmissao);
-        setErro(`Erro na transmissão: ${resultadoTransmissao.mensagem}`);
+        if (detalhes?.codigoStatus) {
+          setErro(`SEFAZ retornou ${detalhes.codigoStatus}: ${detalhes.motivoStatus ?? 'Motivo não informado'}`);
+        } else {
+          setErro(`Erro na transmissão: ${resultadoTransmissao.mensagem}`);
+        }
       }
+
     } catch (error) {
       console.error('TRANSMITIR - ERRO CRÍTICO:', error);
       console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack available');
