@@ -4,6 +4,14 @@ import { Icon } from '../../../ui';
 import Pagination from '../../../components/UI/navigation/Pagination';
 import { MDFeViewModal } from '../../../components/UI/feedback/MDFeViewModal';
 import { formatPlaca } from '../../../utils/formatters';
+import {
+  FileCheck,
+  FileText,
+  Clock,
+  XCircle,
+  TrendingUp
+} from 'lucide-react';
+import { Card, CardContent } from '../../../components/UI/card';
 
 interface MDFe {
   id: number;
@@ -262,116 +270,197 @@ export function ListarMDFe() {
         )}
 
         {/* Header */}
-        <div className="mx-4 sm:mx-6 lg:mx-8 mb-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <i className="fas fa-file-alt text-white text-xl"></i>
+        <div className="mx-4 sm:mx-6 lg:mx-8 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative w-14 h-14 rounded-xl shadow-lg shadow-blue-500/30 overflow-hidden">
+                <span className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-600 to-indigo-700 dark:from-blue-400 dark:via-indigo-500 dark:to-indigo-600" aria-hidden="true" />
+                <span className="absolute inset-0 opacity-40 blur-lg bg-blue-500" aria-hidden="true" />
+                <div className="relative h-full w-full flex items-center justify-center">
+                  <Icon name="file-alt" className="!text-white text-2xl" />
                 </div>
-                Manifestos Eletrônicos (MDFe)
-              </h1>
-              <p className="text-muted-foreground dark:text-gray-300 mt-2">
-                Gerencie seus manifestos eletrônicos de transporte
-              </p>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground mb-1">Manifestos Eletrônicos (MDFe)</h1>
+                <p className="text-muted-foreground text-lg">Gerencie os manifestos eletrônicos de transporte</p>
+              </div>
             </div>
             <button
               onClick={() => navigate('/mdfes/novo')}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
-              <i className="fas fa-plus"></i>
-              Novo MDFe
+              <Icon name="plus" size="lg" />
+              <span>Novo MDFe</span>
             </button>
           </div>
         </div>
 
         {/* Estatísticas */}
         <div className="mx-4 sm:mx-6 lg:mx-8 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-card rounded-xl border border-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <i className="fas fa-check-circle text-green-600 dark:text-green-400 text-xl"></i>
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {/* Card Autorizados */}
+            <Card
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2"
+              onClick={() => { setStatusFiltroTemp('Autorizado'); setStatusFiltro('Autorizado'); }}
+            >
+              <CardContent className="pt-8 px-8 pb-6">
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 mb-4">
+                        Autorizados
+                      </p>
+                      <h3 className="text-4xl font-bold tracking-tight">
+                        {mdfes.filter(m => m.status.toUpperCase() === 'AUTORIZADO').length}
+                      </h3>
+                    </div>
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/20 flex items-center justify-center shadow-sm">
+                      <FileCheck className="h-7 w-7 text-green-600 dark:text-green-400" strokeWidth={2} />
+                    </div>
+                  </div>
+                  <div className="pt-5 border-t border-border/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Documentos válidos
+                      </span>
+                      <span className="text-sm font-bold text-green-600 dark:text-green-400 flex items-center gap-1">
+                        <TrendingUp className="h-4 w-4" />
+                        {mdfes.filter(m => m.status.toUpperCase() === 'AUTORIZADO').length}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-green-600 dark:text-green-400">
-                  <i className="fas fa-arrow-up"></i>
-                </div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-foreground">{mdfes.filter(m => m.status.toUpperCase() === 'AUTORIZADO').length}</div>
-                <div className="text-muted-foreground">Autorizados</div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="bg-card rounded-xl border border-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <i className="fas fa-file-alt text-blue-600 dark:text-blue-400 text-xl"></i>
+            {/* Card Rascunhos */}
+            <Card
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2"
+              onClick={() => { setStatusFiltroTemp('Rascunho'); setStatusFiltro('Rascunho'); }}
+            >
+              <CardContent className="pt-8 px-8 pb-6">
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 mb-4">
+                        Rascunhos
+                      </p>
+                      <h3 className="text-4xl font-bold tracking-tight">
+                        {mdfes.filter(m => m.status.toUpperCase() === 'RASCUNHO').length}
+                      </h3>
+                    </div>
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/20 flex items-center justify-center shadow-sm">
+                      <FileText className="h-7 w-7 text-blue-600 dark:text-blue-400" strokeWidth={2} />
+                    </div>
+                  </div>
+                  <div className="pt-5 border-t border-border/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Aguardando envio
+                      </span>
+                      <span className="text-sm font-bold">
+                        {mdfes.filter(m => m.status.toUpperCase() === 'RASCUNHO').length}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-blue-600 dark:text-blue-400">
-                  <i className="fas fa-minus"></i>
-                </div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-foreground">{mdfes.filter(m => m.status.toUpperCase() === 'RASCUNHO').length}</div>
-                <div className="text-muted-foreground">Rascunhos</div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="bg-card rounded-xl border border-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                  <i className="fas fa-clock text-yellow-600 dark:text-yellow-400 text-xl"></i>
+            {/* Card Pendentes */}
+            <Card
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2"
+              onClick={() => { setStatusFiltroTemp('Pendente'); setStatusFiltro('Pendente'); }}
+            >
+              <CardContent className="pt-8 px-8 pb-6">
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 mb-4">
+                        Pendentes
+                      </p>
+                      <h3 className="text-4xl font-bold tracking-tight">
+                        {mdfes.filter(m => m.status.toUpperCase() === 'PENDENTE').length}
+                      </h3>
+                    </div>
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500/10 to-yellow-600/20 flex items-center justify-center shadow-sm">
+                      <Clock className="h-7 w-7 text-yellow-600 dark:text-yellow-400" strokeWidth={2} />
+                    </div>
+                  </div>
+                  <div className="pt-5 border-t border-border/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Em processamento
+                      </span>
+                      <span className="text-sm font-bold">
+                        {mdfes.filter(m => m.status.toUpperCase() === 'PENDENTE').length}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-yellow-600 dark:text-yellow-400">
-                  <i className="fas fa-arrow-up"></i>
-                </div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-foreground">{mdfes.filter(m => m.status.toUpperCase() === 'PENDENTE').length}</div>
-                <div className="text-muted-foreground">Pendentes</div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="bg-card rounded-xl border border-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                  <i className="fas fa-times-circle text-red-600 dark:text-red-400 text-xl"></i>
+            {/* Card Rejeitados/Cancelados */}
+            <Card
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2"
+              onClick={() => { setStatusFiltroTemp('Rejeitado'); setStatusFiltro('Rejeitado'); }}
+            >
+              <CardContent className="pt-8 px-8 pb-6">
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 mb-4">
+                        Rejeitados/Cancelados
+                      </p>
+                      <h3 className="text-4xl font-bold tracking-tight">
+                        {mdfes.filter(m => m.status.toUpperCase() === 'REJEITADO' || m.status.toUpperCase() === 'CANCELADO').length}
+                      </h3>
+                    </div>
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500/10 to-red-600/20 flex items-center justify-center shadow-sm">
+                      <XCircle className="h-7 w-7 text-red-600 dark:text-red-400" strokeWidth={2} />
+                    </div>
+                  </div>
+                  <div className="pt-5 border-t border-border/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Com problemas
+                      </span>
+                      <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                        {mdfes.filter(m => m.status.toUpperCase() === 'REJEITADO' || m.status.toUpperCase() === 'CANCELADO').length}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-red-600 dark:text-red-400">
-                  <i className="fas fa-arrow-down"></i>
-                </div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-foreground">{mdfes.filter(m => m.status.toUpperCase() === 'REJEITADO' || m.status.toUpperCase() === 'CANCELADO').length}</div>
-                <div className="text-muted-foreground">Rejeitados/Cancelados</div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
         {/* Filtros */}
         <div className="mx-4 sm:mx-6 lg:mx-8 mb-6">
-          <div className="bg-card rounded-xl border border-border p-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="space-y-2">
+          <div className="bg-card rounded-lg border border-gray-200 dark:border-0 p-6">
+            <div className="grid grid-cols-5 gap-4 items-end">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Buscar</label>
                 <input
                   type="text"
-                  placeholder="Buscar por número, emitente ou veículo..."
+                  placeholder="Número, emitente ou veículo..."
                   value={filtroTemp}
                   onChange={(e) => setFiltroTemp(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (setFiltro(filtroTemp), setStatusFiltro(statusFiltroTemp))}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
-              <div className="space-y-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Status</label>
                 <select
                   value={statusFiltroTemp}
                   onChange={(e) => setStatusFiltroTemp(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 >
-                  <option value="todos">Todos os Status</option>
+                  <option value="todos">Todos os status</option>
                   <option value="Autorizado">Autorizado</option>
                   <option value="Pendente">Pendente</option>
                   <option value="Rascunho">Rascunho</option>
@@ -380,25 +469,26 @@ export function ListarMDFe() {
                 </select>
               </div>
 
-              <div className="space-y-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Itens por página</label>
                 <select
                   value={itensPorPagina}
                   onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 >
-                  <option value={5}>5 por página</option>
-                  <option value={10}>10 por página</option>
-                  <option value={25}>25 por página</option>
-                  <option value={50}>50 por página</option>
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
                 </select>
               </div>
 
               <div>
                 <button
                   onClick={() => { setFiltro(filtroTemp); setStatusFiltro(statusFiltroTemp); }}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                  className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                 >
-                  <i className="fas fa-search"></i>
+                  <Icon name="search" />
                   Filtrar
                 </button>
               </div>
@@ -406,132 +496,137 @@ export function ListarMDFe() {
               <div>
                 <button
                   onClick={() => { setFiltroTemp(''); setStatusFiltroTemp('todos'); setFiltro(''); setStatusFiltro('todos'); }}
-                  className="w-full px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+                  className="w-full px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-200 dark:border-red-800 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!filtroTemp && statusFiltroTemp === 'todos'}
                 >
-                  <i className="fas fa-times"></i>
+                  <Icon name="times" />
                   Limpar
                 </button>
               </div>
             </div>
           </div>
+
+          {/* Indicador de filtros ativos */}
+          {(filtro || statusFiltro !== 'todos') && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-4">
+              <div className="flex items-center gap-2">
+                <Icon name="filter" className="text-blue-800 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
+                  Filtros ativos:
+                  {filtro && <span className="ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs">{filtro}</span>}
+                  {statusFiltro !== 'todos' && <span className="ml-1 px-2 py-1 bg-blue-100 dark:bg-blue-800 rounded text-xs">{statusFiltro}</span>}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Lista de MDFes */}
-        <div className="bg-card shadow-sm">
-          {totalItems > 0 && (
-            <div className="px-6 py-3 border-b border-border bg-muted">
-              <span className="text-sm text-muted-foreground">
-                Mostrando {startIndex + 1} a {Math.min(endIndex, totalItems)} de {totalItems} MDFes
-              </span>
-            </div>
-          )}
-
-          {itensAtuais.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-6">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                <i className="fas fa-file-alt text-2xl text-muted-foreground"></i>
+        <div className="mx-4 sm:mx-6 lg:mx-8">
+          <div className="bg-card rounded-lg border border-gray-200 dark:border-0 shadow-sm">
+            {itensAtuais.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-6">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                  <Icon name="file-alt" className="text-2xl text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {(filtro || statusFiltro !== 'todos') ? 'Nenhum MDFe encontrado com os filtros aplicados' : 'Nenhum MDFe encontrado'}
+                </h3>
+                <p className="text-muted-foreground text-center mb-6">
+                  {(filtro || statusFiltro !== 'todos') ? 'Tente ajustar os filtros ou limpar para ver todos os MDFes.' : 'Comece criando seu primeiro manifesto eletrônico.'}
+                </p>
+                {(!filtro && statusFiltro === 'todos') && (
+                  <button
+                    onClick={() => navigate('/mdfes/novo')}
+                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 shadow-lg"
+                  >
+                    <Icon name="plus" />
+                    Criar Primeiro MDFe
+                  </button>
+                )}
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum MDFe encontrado</h3>
-              <p className="text-muted-foreground text-center mb-6">
-                {filtro || statusFiltro !== 'todos'
-                  ? 'Tente ajustar os filtros para encontrar o que procura.'
-                  : 'Comece criando seu primeiro manifesto eletrônico.'
-                }
-              </p>
-              {(!filtro && statusFiltro === 'todos') && (
-                <button
-                  onClick={() => navigate('/mdfes/novo')}
-                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover font-medium transition-colors duration-200 flex items-center gap-2"
-                >
-                  <i className="fas fa-plus"></i>
-                  Criar Primeiro MDFe
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto w-full">
-              <table className="w-full min-w-full table-auto border-collapse">
-                {/* Header da Tabela */}
-                <thead className="bg-gray-100 dark:bg-gray-800">
-                  <tr>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground dark:text-gray-100 w-36">
-                      Número/Série
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground dark:text-gray-100">
-                      Emitente
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground dark:text-gray-100 w-32">
-                      Data
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground dark:text-gray-100 w-28">
-                      Trajeto
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground dark:text-gray-100 w-32">
-                      Veículo
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground dark:text-gray-100 w-40">
-                      Valor Carga
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground dark:text-gray-100 w-36">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground dark:text-gray-100 w-48">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
+            ) : (
+              <>
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full min-w-full table-auto border-collapse">
+                    {/* Header da Tabela */}
+                    <thead className="bg-background dark:bg-gray-800 border-b border-gray-200 dark:border-0">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground w-36">
+                          Número/Série
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                          Emitente
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground w-32">
+                          Data
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground w-28">
+                          Trajeto
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground w-32">
+                          Veículo
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground w-40">
+                          Valor Carga
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground w-36">
+                          Status
+                        </th>
+                        <th className="px-6 py-4 text-center text-sm font-semibold text-foreground w-48">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
 
-                {/* Linhas da Tabela */}
-                <tbody className="bg-card dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                  {itensAtuais.map((mdfe) => (
-                    <tr key={mdfe.id} className="hover:bg-background dark:hover:bg-gray-800 transition-colors duration-200">
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm">
-                          <div className="font-semibold text-foreground dark:text-gray-100">#{mdfe.numero}</div>
-                          <div className="text-gray-500 dark:text-gray-400">Série {mdfe.serie}</div>
-                        </div>
-                      </td>
+                    {/* Linhas da Tabela */}
+                    <tbody className="bg-card divide-y divide-gray-200 dark:divide-transparent">
+                      {itensAtuais.map((mdfe) => (
+                        <tr key={mdfe.id} className="border-b border-gray-200 dark:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-150">
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-foreground">#{mdfe.numero}</div>
+                            <div className="text-xs text-muted-foreground">Série {mdfe.serie}</div>
+                          </td>
 
-                      <td className="px-6 py-4 text-center">
-                        <div className="text-sm font-medium text-foreground dark:text-gray-100">
-                          {mdfe.emitenteNome || 'N/A'}
-                        </div>
-                      </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-medium text-foreground">
+                              {mdfe.emitenteNome || 'N/A'}
+                            </div>
+                          </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm text-foreground dark:text-gray-100">
-                          {new Date(mdfe.dataEmissao).toLocaleDateString('pt-BR')}
-                        </div>
-                      </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-muted-foreground">
+                              {new Date(mdfe.dataEmissao).toLocaleDateString('pt-BR')}
+                            </div>
+                          </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm text-foreground dark:text-gray-100">
-                          {mdfe.ufIni && mdfe.ufFim ? (
-                            <span className="inline-flex items-center gap-1">
-                              {mdfe.ufIni}
-                              <i className="fas fa-arrow-right text-xs text-gray-400"></i>
-                              {mdfe.ufFim}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 italic">Não informado</span>
-                          )}
-                        </div>
-                      </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-foreground">
+                              {mdfe.ufIni && mdfe.ufFim ? (
+                                <span className="inline-flex items-center gap-1">
+                                  {mdfe.ufIni}
+                                  <Icon name="arrow-right" className="text-xs text-gray-400" />
+                                  {mdfe.ufFim}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 italic">Não informado</span>
+                              )}
+                            </div>
+                          </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm font-medium text-foreground dark:text-gray-100">
-                          {mdfe.veiculoPlaca ? formatPlaca(mdfe.veiculoPlaca) : 'N/A'}
-                        </div>
-                      </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-medium text-foreground">
+                              {mdfe.veiculoPlaca ? formatPlaca(mdfe.veiculoPlaca) : 'N/A'}
+                            </div>
+                          </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm font-semibold text-green-600 dark:text-green-400">
-                          R$ {mdfe.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </div>
-                      </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-semibold text-green-600 dark:text-green-400">
+                              R$ {mdfe.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </div>
+                          </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                           mdfe.status.toUpperCase() === 'AUTORIZADO'
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
@@ -544,100 +639,101 @@ export function ListarMDFe() {
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex items-center gap-1 justify-center">
-                          {/* Ação principal por status */}
-                          {(mdfe.status.toUpperCase() === 'RASCUNHO' || mdfe.status.toUpperCase() === 'REJEITADO') ? (
-                            <button
-                              className="w-8 h-8 flex items-center justify-center text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/20 rounded-lg transition-all duration-200 hover:scale-110"
-                              title={mdfe.status.toUpperCase() === 'REJEITADO' ? 'Corrigir & Editar' : 'Continuar Editando'}
-                              onClick={() => navigate(`/mdfes/editar/${mdfe.id}`)}
-                            >
-                              <i className="fas fa-edit text-sm"></i>
-                            </button>
-                          ) : (
-                            <button
-                              className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 hover:scale-110"
-                              title="Ver Detalhes"
-                              onClick={() => navigate(`/mdfes/visualizar/${mdfe.id}`)}
-                            >
-                              <i className="fas fa-eye text-sm"></i>
-                            </button>
-                          )}
-
-                          {/* Download PDF apenas para autorizados, encerrados e cancelados */}
-                          {(mdfe.status.toUpperCase() === 'AUTORIZADO' || mdfe.status.toUpperCase() === 'ENCERRADO' || mdfe.status.toUpperCase() === 'CANCELADO') && (
-                            <button
-                              className="w-8 h-8 flex items-center justify-center text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                              title="Baixar PDF do DAMDFE"
-                              onClick={() => handleBaixarPDF(mdfe.id, mdfe.numero)}
-                              disabled={processando === mdfe.id}
-                            >
-                              {processando === mdfe.id ? (
-                                <i className="fas fa-spinner fa-spin text-sm"></i>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {/* Ação principal por status */}
+                              {(mdfe.status.toUpperCase() === 'RASCUNHO' || mdfe.status.toUpperCase() === 'REJEITADO') ? (
+                                <button
+                                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+                                  title={mdfe.status.toUpperCase() === 'REJEITADO' ? 'Corrigir & Editar' : 'Continuar Editando'}
+                                  onClick={() => navigate(`/mdfes/editar/${mdfe.id}`)}
+                                >
+                                  <Icon name="edit" />
+                                </button>
                               ) : (
-                                <i className="fas fa-file-pdf text-sm"></i>
+                                <button
+                                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                                  title="Ver Detalhes"
+                                  onClick={() => navigate(`/mdfes/visualizar/${mdfe.id}`)}
+                                >
+                                  <Icon name="eye" />
+                                </button>
                               )}
-                            </button>
-                          )}
 
-                          {/* Transmitir rascunhos */}
-                          {mdfe.status.toUpperCase() === 'RASCUNHO' && (
-                            <button
-                              className="w-8 h-8 flex items-center justify-center text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                              title="Transmitir MDFe"
-                              onClick={() => handleTransmitir(mdfe.id, mdfe.numero)}
-                              disabled={processando === mdfe.id}
-                            >
-                              {processando === mdfe.id ? (
-                                <i className="fas fa-spinner fa-spin text-sm"></i>
-                              ) : (
-                                <i className="fas fa-paper-plane text-sm"></i>
+                              {/* Download PDF apenas para autorizados, encerrados e cancelados */}
+                              {(mdfe.status.toUpperCase() === 'AUTORIZADO' || mdfe.status.toUpperCase() === 'ENCERRADO' || mdfe.status.toUpperCase() === 'CANCELADO') && (
+                                <button
+                                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Baixar PDF do DAMDFE"
+                                  onClick={() => handleBaixarPDF(mdfe.id, mdfe.numero)}
+                                  disabled={processando === mdfe.id}
+                                >
+                                  {processando === mdfe.id ? (
+                                    <Icon name="spinner" className="animate-spin" />
+                                  ) : (
+                                    <Icon name="file-pdf" />
+                                  )}
+                                </button>
                               )}
-                            </button>
-                          )}
 
-                          {/* Duplicar sempre disponível (exceto cancelados) */}
-                          {mdfe.status.toUpperCase() !== 'CANCELADO' && (
-                            <button
-                              className="w-8 h-8 flex items-center justify-center text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                              title="Duplicar MDFe"
-                              onClick={() => {
-                                // Implementar lógica de duplicação
-                                navigate(`/mdfes/duplicar/${mdfe.id}`);
-                              }}
-                              disabled={processando === mdfe.id}
-                            >
-                              <i className="fas fa-copy text-sm"></i>
-                            </button>
-                          )}
+                              {/* Transmitir rascunhos */}
+                              {mdfe.status.toUpperCase() === 'RASCUNHO' && (
+                                <button
+                                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Transmitir MDFe"
+                                  onClick={() => handleTransmitir(mdfe.id, mdfe.numero)}
+                                  disabled={processando === mdfe.id}
+                                >
+                                  {processando === mdfe.id ? (
+                                    <Icon name="spinner" className="animate-spin" />
+                                  ) : (
+                                    <Icon name="paper-plane" />
+                                  )}
+                                </button>
+                              )}
 
-                          {/* Excluir (apenas rascunhos e rejeitados) */}
-                          {(mdfe.status.toUpperCase() === 'RASCUNHO' || mdfe.status.toUpperCase() === 'REJEITADO') && (
-                            <button
-                              className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 hover:scale-110"
-                              title="Excluir MDFe"
-                              onClick={() => setMdfeParaExcluir({ id: mdfe.id, numero: mdfe.numero })}
-                            >
-                              <i className="fas fa-trash text-sm"></i>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                              {/* Duplicar sempre disponível (exceto cancelados) */}
+                              {mdfe.status.toUpperCase() !== 'CANCELADO' && (
+                                <button
+                                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Duplicar MDFe"
+                                  onClick={() => navigate(`/mdfes/duplicar/${mdfe.id}`)}
+                                  disabled={processando === mdfe.id}
+                                >
+                                  <Icon name="copy" />
+                                </button>
+                              )}
 
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={paginaAtual}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
-          )}
+                              {/* Excluir (apenas rascunhos e rejeitados) */}
+                              {(mdfe.status.toUpperCase() === 'RASCUNHO' || mdfe.status.toUpperCase() === 'REJEITADO') && (
+                                <button
+                                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                                  title="Excluir MDFe"
+                                  onClick={() => setMdfeParaExcluir({ id: mdfe.id, numero: mdfe.numero })}
+                                >
+                                  <Icon name="trash" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="px-6 py-4 border-t border-gray-200 dark:border-0">
+                    <Pagination
+                      currentPage={paginaAtual}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Modal de Visualização */}

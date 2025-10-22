@@ -125,19 +125,37 @@ namespace Backend.Api.Controllers
         {
             try
             {
-                // Extrair cargoId do JWT
+                // Extrair cargoId e cargo do JWT
                 var cargoIdClaim = User?.FindFirst("CargoId")?.Value;
+                var cargoNomeClaim = User?.FindFirst("Cargo")?.Value;
+
+                Console.WriteLine($"[PERMISSOES] Solicitação de permissões - CargoId: {cargoIdClaim}, Cargo: {cargoNomeClaim}");
 
                 if (!int.TryParse(cargoIdClaim, out int cargoId))
                 {
+                    Console.WriteLine($"[PERMISSOES] ERRO: CargoId inválido ou não encontrado no token");
                     return Ok(new List<string>());
                 }
 
+                // Se for cargo Programador, garantir que retorna todas as permissões
+                if (cargoNomeClaim == "Programador")
+                {
+                    var todasPermissoes = await _context.Permissoes
+                        .Where(p => p.Ativo)
+                        .Select(p => p.Codigo)
+                        .ToListAsync();
+                    
+                    Console.WriteLine($"[PERMISSOES] Cargo Programador detectado - Retornando {todasPermissoes.Count} permissões");
+                    return Ok(todasPermissoes);
+                }
+
                 var permissions = await _permissaoService.GetUserPermissionsAsync(cargoId);
+                Console.WriteLine($"[PERMISSOES] Retornando {permissions.Count()} permissões para cargoId: {cargoId}");
                 return Ok(permissions);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[PERMISSOES] ERRO: {ex.Message}");
                 return StatusCode(500, new { message = "Erro interno do servidor", details = ex.Message });
             }
         }

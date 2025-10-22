@@ -31,6 +31,8 @@ public class ConfiguracoesEmpresaController : ControllerBase
         var pastaLogos = Path.Combine(_contextoEmpresa.Armazenamento.CaminhoBase, _contextoEmpresa.Armazenamento.PastaLogos);
         string? urlLogotipo = null;
         string? nomeArquivo = emitente?.CaminhoLogotipo;
+        string? urlImagemFundo = null;
+        string? arquivoFundo = emitente?.CaminhoImagemFundo;
         if (!string.IsNullOrWhiteSpace(nomeArquivo))
         {
             var caminhoFisico = Path.Combine(pastaLogos, nomeArquivo);
@@ -38,6 +40,16 @@ public class ConfiguracoesEmpresaController : ControllerBase
             {
                 var versao = System.IO.File.GetLastWriteTimeUtc(caminhoFisico).ToString("yyyyMMddHHmmss");
                 urlLogotipo = $"/api/emitentes/logotipo?v={versao}";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(arquivoFundo))
+        {
+            var caminhoFisicoFundo = Path.Combine(pastaLogos, arquivoFundo);
+            if (System.IO.File.Exists(caminhoFisicoFundo))
+            {
+                var versao = System.IO.File.GetLastWriteTimeUtc(caminhoFisicoFundo).ToString("yyyyMMddHHmmss");
+                urlImagemFundo = $"/api/emitentes/imagem-fundo?v={versao}";
             }
         }
 
@@ -49,6 +61,8 @@ public class ConfiguracoesEmpresaController : ControllerBase
             EmitenteConfigurado = emitente != null,
             CaminhoLogotipo = emitente?.CaminhoLogotipo,
             UrlLogotipo = urlLogotipo,
+            CaminhoImagemFundo = emitente?.CaminhoImagemFundo,
+            UrlImagemFundo = urlImagemFundo,
             CaminhoBaseArmazenamento = _contextoEmpresa.Armazenamento.CaminhoBase,
             PastaXml = _contextoEmpresa.Armazenamento.PastaXml,
             PastaCertificados = _contextoEmpresa.Armazenamento.PastaCertificados,

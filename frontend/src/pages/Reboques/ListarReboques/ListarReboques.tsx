@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { reboquesService, ReboqueList, ReboqueDetail } from '../../../services/reboquesService';
 import Icon from '../../../components/UI/Icon';
+import { Icon as ThemedIcon } from '../../../ui';
 import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
 import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
 import { reboqueConfig } from '../../../components/Reboques/ReboqueConfig';
@@ -201,7 +202,7 @@ export function ListarReboques() {
         <div className="w-full px-6 py-8">
           <div className="flex items-center justify-center py-16">
             <div className="flex items-center gap-4">
-              <div className="w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-amber-700 border-t-transparent rounded-full animate-spin"></div>
               <span className="text-muted-foreground">Carregando reboques...</span>
             </div>
           </div>
@@ -212,20 +213,24 @@ export function ListarReboques() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="w-full px-2 py-4">
+      <div className="w-full py-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-orange-600 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Icon name="truck" className="text-white" size="xl" />
+            <div className="relative w-14 h-14 rounded-xl shadow-lg shadow-amber-700/30 overflow-hidden">
+              <span className="absolute inset-0 bg-gradient-to-br from-amber-800 via-amber-700 to-amber-600 dark:from-amber-700 dark:via-amber-600 dark:to-amber-500" aria-hidden="true" />
+              <span className="absolute inset-0 opacity-40 blur-lg bg-amber-700" aria-hidden="true" />
+              <div className="relative h-full w-full flex items-center justify-center">
+                <ThemedIcon name="truck" className="!text-white text-2xl" />
+              </div>
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-1">Reboques</h1>
-              <p className="text-muted-foreground text-lg">Gerencie os reboques para transporte de carga</p>
+              <p className="text-muted-foreground text-lg">Gerencie os reboques cadastrados no sistema</p>
             </div>
           </div>
           <button
-            className="px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="px-6 py-3 bg-gradient-to-r from-amber-800 to-amber-700 hover:from-amber-900 hover:to-amber-800 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
             onClick={abrirNovo}
           >
             <Icon name="plus" size="lg" />
@@ -240,11 +245,11 @@ export function ListarReboques() {
               <label className="block text-sm font-medium text-foreground mb-2">Buscar</label>
               <input
                 type="text"
+                placeholder="Placa ou RNTRC..."
                 value={filtroTemp}
                 onChange={(e) => setFiltroTemp(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && aplicarFiltros()}
-                placeholder="Placa ou RNTRC..."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-700/20 focus:border-amber-700"
               />
             </div>
 
@@ -253,9 +258,9 @@ export function ListarReboques() {
               <select
                 value={filtroUfTemp}
                 onChange={(e) => setFiltroUfTemp(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-amber-700/20 focus:border-amber-700"
               >
-                <option value="">Todos os estados</option>
+                <option value="">Todas as UF</option>
                 {reboquesService.getEstados().map(estado => (
                   <option key={estado.value} value={estado.value}>
                     {estado.label}
@@ -269,9 +274,9 @@ export function ListarReboques() {
               <select
                 value={filtroStatusTemp}
                 onChange={(e) => setFiltroStatusTemp(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-amber-700/20 focus:border-amber-700"
               >
-                <option value="">Todos</option>
+                <option value="">Todos os status</option>
                 <option value="ativo">Ativo</option>
                 <option value="inativo">Inativo</option>
               </select>
@@ -280,7 +285,7 @@ export function ListarReboques() {
             <div>
               <button
                 onClick={aplicarFiltros}
-                className="w-full px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                className="w-full px-4 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
               >
                 <Icon name="search" />
                 Filtrar
@@ -302,14 +307,14 @@ export function ListarReboques() {
 
         {/* Indicador de filtros ativos */}
         {(filtro || filtroUf || filtroStatus) && (
-          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mb-4">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-4">
             <div className="flex items-center gap-2">
-              <Icon name="filter" className="text-orange-600 dark:text-orange-400" />
-              <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
+              <Icon name="filter" className="text-amber-800 dark:text-amber-400" />
+              <span className="text-sm font-medium text-amber-900 dark:text-amber-300">
                 Filtros ativos:
-                {filtro && <span className="ml-1 px-2 py-1 bg-orange-100 dark:bg-orange-800 rounded text-xs">{filtro}</span>}
-                {filtroUf && <span className="ml-1 px-2 py-1 bg-orange-100 dark:bg-orange-800 rounded text-xs">{filtroUf}</span>}
-                {filtroStatus && <span className="ml-1 px-2 py-1 bg-orange-100 dark:bg-orange-800 rounded text-xs">{filtroStatus === 'ativo' ? 'Ativo' : 'Inativo'}</span>}
+                {filtro && <span className="ml-1 px-2 py-1 bg-amber-100 dark:bg-amber-800 rounded text-xs">{filtro}</span>}
+                {filtroUf && <span className="ml-1 px-2 py-1 bg-amber-100 dark:bg-amber-800 rounded text-xs">{filtroUf}</span>}
+                {filtroStatus && <span className="ml-1 px-2 py-1 bg-amber-100 dark:bg-amber-800 rounded text-xs">{filtroStatus === 'ativo' ? 'Ativo' : 'Inativo'}</span>}
               </span>
             </div>
           </div>
@@ -322,63 +327,69 @@ export function ListarReboques() {
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
                 <Icon name="truck" className="text-2xl text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum reboque encontrado</h3>
-              <p className="text-muted-foreground text-center">Tente ajustar os filtros ou cadastre um novo reboque.</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {(filtro || filtroUf || filtroStatus) ? 'Nenhum reboque encontrado com os filtros aplicados' : 'Nenhum reboque encontrado'}
+              </h3>
+              <p className="text-muted-foreground text-center">
+                {(filtro || filtroUf || filtroStatus) ? 'Tente ajustar os filtros ou limpar para ver todos os reboques.' : 'Cadastre um novo reboque para começar.'}
+              </p>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-9 gap-4 p-4 bg-background dark:bg-gray-800 border-b border-gray-200 dark:border-0 font-semibold text-foreground">
-                <div className="text-center">Placa</div>
-                <div className="text-center">Tara</div>
-                <div className="text-center">Tipo Rodado</div>
-                <div className="text-center">Tipo Carroceria</div>
-                <div className="text-center">UF</div>
-                <div className="text-center">RNTRC</div>
-                <div className="text-center">Status</div>
-                <div className="text-center">Data Cadastro</div>
+                <div>Placa</div>
+                <div>Tara</div>
+                <div>Tipo Rodado</div>
+                <div>Tipo Carroceria</div>
+                <div>UF</div>
+                <div>RNTRC</div>
+                <div>Status</div>
+                <div>Data Cadastro</div>
                 <div className="text-center">Ações</div>
               </div>
+
               {reboquesFiltrados.map((reboque) => (
-                <div key={reboque.id} className="grid grid-cols-9 gap-4 p-4 border-b border-gray-200 dark:border-0 hover:bg-background dark:hover:bg-gray-700 transition-colors duration-200">
-                  <div className="text-center">
-                    <strong className="text-foreground">{formatPlaca(reboque.placa)}</strong>
-                  </div>
-                  <div className="text-center text-foreground">{formatarTara(reboque.tara)}</div>
-                  <div className="text-center text-foreground">{getTipoRodadoNome(reboque.tipoRodado)}</div>
-                  <div className="text-center text-foreground">{getTipoCarroceriaNome(reboque.tipoCarroceria)}</div>
-                  <div className="text-center">
-                    <span className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 rounded text-xs font-medium">{reboque.uf}</span>
-                  </div>
-                  <div className="text-center text-foreground">{reboque.rntrc || '-'}</div>
-                  <div className="text-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      reboque.ativo
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-                    }`}>
+                <div
+                  key={reboque.id}
+                  className="grid grid-cols-9 gap-4 p-4 border-b border-gray-200 dark:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-150 items-center"
+                >
+                  <div className="text-foreground font-mono font-semibold">{formatPlaca(reboque.placa)}</div>
+                  <div className="text-foreground">{formatarTara(reboque.tara)}</div>
+                  <div className="text-muted-foreground">{getTipoRodadoNome(reboque.tipoRodado)}</div>
+                  <div className="text-muted-foreground">{getTipoCarroceriaNome(reboque.tipoCarroceria)}</div>
+                  <div className="text-foreground">{reboque.uf}</div>
+                  <div className="text-muted-foreground">{reboque.rntrc || '-'}</div>
+                  <div>
+                    <span
+                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${reboque.ativo
+                        ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}
+                    >
+                      <Icon name={reboque.ativo ? 'check-circle' : 'times-circle'} />
                       {reboque.ativo ? 'Ativo' : 'Inativo'}
                     </span>
                   </div>
-                  <div className="text-center text-foreground">{formatarData(reboque.dataCriacao)}</div>
+                  <div className="text-muted-foreground">{formatarData(reboque.dataCriacao)}</div>
                   <div className="flex items-center justify-center gap-2">
                     <button
-                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200"
-                      onClick={() => abrirModalVisualizacao(reboque)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                       title="Visualizar"
+                      onClick={() => abrirModalVisualizacao(reboque)}
                     >
                       <Icon name="eye" />
                     </button>
                     <button
-                      className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
-                      onClick={() => abrirEdicao(reboque)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
                       title="Editar"
+                      onClick={() => abrirEdicao(reboque)}
                     >
                       <Icon name="edit" />
                     </button>
                     <button
-                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200"
-                      onClick={() => abrirModalExclusao(reboque)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       title="Excluir"
+                      onClick={() => abrirModalExclusao(reboque)}
                     >
                       <Icon name="trash" />
                     </button>
@@ -390,58 +401,55 @@ export function ListarReboques() {
         </div>
 
         {/* Paginação */}
-        {paginacao && paginacao.totalItems > 0 && (
-          <div className="mt-6 bg-card border-t border-gray-200 dark:border-0 p-4 rounded-b-lg">
-            <div className="flex flex-row justify-between items-center gap-4">
-              <div className="text-sm text-muted-foreground text-left">
-                Mostrando {paginacao.startItem} até {paginacao.endItem} de {paginacao.totalItems} registros
-              </div>
-
-              {paginacao.totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setPaginaAtual(paginaAtual - 1)}
-                    disabled={!paginacao.hasPreviousPage}
-                    className="px-4 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground hover:bg-background dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
-                  >
-                    Anterior
-                  </button>
-
-                  <span className="px-4 py-2 text-foreground font-medium text-sm whitespace-nowrap">
-                    Página {paginacao.currentPage} de {paginacao.totalPages}
-                  </span>
-
-                  <button
-                    onClick={() => setPaginaAtual(paginaAtual + 1)}
-                    disabled={!paginacao.hasNextPage}
-                    className="px-4 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground hover:bg-background dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
-                  >
-                    Próxima
-                  </button>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-foreground">Itens por página:</label>
-                <select
-                  value={tamanhoPagina}
-                  onChange={(e) => {
-                    setTamanhoPagina(Number(e.target.value));
-                    setPaginaAtual(1);
-                  }}
-                  className="px-3 py-1 border border-gray-300 dark:border-0 rounded bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
+        {paginacao && (
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted-foreground">Itens por página:</label>
+              <select
+                value={tamanhoPagina}
+                onChange={(e) => {
+                  setTamanhoPagina(Number(e.target.value));
+                  setPaginaAtual(1);
+                }}
+                className="px-3 py-1.5 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-amber-700/20 focus:border-amber-700"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
             </div>
+
+            <div className="flex justify-center">
+              <span className="text-sm text-muted-foreground">
+                {paginacao.currentPage} / {paginacao.totalPages}
+              </span>
+            </div>
+
+            {paginacao.totalPages > 1 && (
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setPaginaAtual(paginaAtual - 1)}
+                  disabled={!paginacao.hasPreviousPage}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:disabled:hover:bg-transparent"
+                  title="Página anterior"
+                >
+                  <Icon name="chevron-left" />
+                </button>
+                <button
+                  onClick={() => setPaginaAtual(paginaAtual + 1)}
+                  disabled={!paginacao.hasNextPage}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:disabled:hover:bg-transparent"
+                  title="Próxima página"
+                >
+                  <Icon name="chevron-right" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Modal de visualiza��o */}
+        {/* Modal de visualização */}
         <GenericViewModal
           isOpen={modalVisualizacao}
           onClose={fecharModais}
@@ -470,7 +478,7 @@ export function ListarReboques() {
           idField={reboqueConfig.view.idField}
         />
 
-        {/* Modal de exclus�o */}
+        {/* Modal de exclusão */}
         <ConfirmDeleteModal
           isOpen={modalExclusao}
           title="Excluir Reboque"

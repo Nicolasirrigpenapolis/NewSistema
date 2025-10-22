@@ -1,4 +1,20 @@
 {
+  // Ignora avisos/erros de at-rules desconhecidas como @tailwind e @apply
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
+
+  // Opcional: tratar arquivos .css como Tailwind para melhor IntelliSense
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+
+  // Não é obrigatório, mas ajuda no autocompletar do Tailwind em strings
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+
+  // Preferências de TypeScript/Editor
   "typescript.tsserver.autoRestart": false,
   "typescript.disableAutomaticTypeAcquisition": true,
   "files.autoSave": "off",

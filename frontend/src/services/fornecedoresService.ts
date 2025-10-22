@@ -5,7 +5,7 @@ import { ApiResponse, EntityOption } from '../types/apiResponse';
 export interface Fornecedor {
   id: number;
   nome: string;
-  cnpjCpf: string;
+  cnpjCpf: string;  // Campo unificado
   tipoPessoa: 'F' | 'J'; // F = Física, J = Jurídica
   email?: string;
   telefone?: string;
@@ -21,7 +21,7 @@ export interface Fornecedor {
 
 export interface FornecedorCreateDto {
   nome: string;
-  cnpjCpf: string;
+  cnpjCpf: string;  // Campo unificado
   tipoPessoa: 'F' | 'J';
   email?: string;
   telefone?: string;
@@ -40,7 +40,7 @@ export interface FornecedorUpdateDto extends FornecedorCreateDto {
 export interface FornecedorListDto {
   id: number;
   nome: string;
-  cnpjCpf: string;
+  cnpjCpf: string;  // Campo unificado
   tipoPessoa: string;
   telefone?: string;
   cidade?: string;
@@ -221,23 +221,29 @@ class FornecedoresService {
   // Obter fornecedores como EntityOption[] (para selects)
   async obterFornecedoresOptions(): Promise<EntityOption[]> {
     try {
-      const response = await this.getFornecedores({ ativo: true, pageSize: 1000 });
+      // Usar a API paginada mas retornar apenas os IDs e nomes
+      const response = await this.getFornecedores({
+        ativo: true,
+        pageSize: 100,
+        page: 1,
+        sortBy: 'nome',
+        sortDirection: 'asc'
+      });
 
-      if (response.success && response.data) {
-        return response.data.items.map(f => ({
-          id: f.id,
-          label: f.nome
-        }));
+      if (!response.success || !response.data || !response.data.items) {
+        console.warn('Nenhum fornecedor encontrado');
+        return [];
       }
 
-      return [];
+      return response.data.items.map(f => ({
+        id: f.id,
+        label: f.nome
+      }));
     } catch (error) {
       console.error('Erro ao obter fornecedores:', error);
       return [];
     }
-  }
-
-  // Formata CNPJ ou CPF conforme tipo ('F' para físico, 'J' para jurídico)
+  }  // Formata CNPJ ou CPF conforme tipo ('F' para físico, 'J' para jurídico)
   formatDocument(value: string | undefined, tipoPessoa: 'F' | 'J' | string | undefined): string {
     if (!value) return '';
     const digits = value.replace(/\D/g, '');

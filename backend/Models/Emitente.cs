@@ -63,6 +63,9 @@ namespace Backend.Api.Models
         [MaxLength(256)]
         public string? CaminhoLogotipo { get; set; }
 
+    [MaxLength(256)]
+    public string? CaminhoImagemFundo { get; set; }
+
         [MaxLength(500)]
         public string? CaminhoCertificadoDigital { get; set; }
 

@@ -36,27 +36,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Em desenvolvimento, simular usuário logado automaticamente
-        const isDevelopment = process.env.NODE_ENV === 'development';
-
-        if (isDevelopment) {
-          // Simular usuário padrão para desenvolvimento
-          const mockUser: UserInfo = {
-            id: 1,
-            nome: 'Usuário Desenvolvimento',
-            username: 'programador',
-            cargoId: 1,
-            cargoNome: 'Administrador'
-          };
-
-          setIsAuthenticated(true);
-          setUser(mockUser);
-          setToken('mock-dev-token');
-          updateTokenInfo();
-          setLoading(false);
-          return;
-        }
-
         const authenticated = authService.isAuthenticated();
         const currentUser = authService.getCurrentUser();
         const currentToken = authService.getToken();
@@ -97,15 +76,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Atualizar informações do token
    */
   const updateTokenInfo = () => {
-    // Em desenvolvimento, não verificar expiração do token
-    const isDevelopment = process.env.NODE_ENV === 'development';
-
-    if (isDevelopment) {
-      // Em dev, manter token válido artificialmente
-      setTokenTimeRemaining(9999);
-      return;
-    }
-
     const timeRemaining = authService.getTokenTimeRemaining();
     setTokenTimeRemaining(timeRemaining);
 
@@ -235,11 +205,7 @@ export function useRequireAuth() {
   const auth = useAuth();
 
   useEffect(() => {
-    // Em desenvolvimento, não redirecionar para login
-    const isDevelopment = process.env.NODE_ENV === 'development';
-
-    if (!isDevelopment && !auth.loading && !auth.isAuthenticated) {
-      // Redirecionar para login apenas em produção
+    if (!auth.loading && !auth.isAuthenticated) {
       window.location.href = '/login';
     }
   }, [auth.loading, auth.isAuthenticated]);

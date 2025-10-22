@@ -8,6 +8,8 @@ public class EmpresaConfiguracaoDto
     public bool EmitenteConfigurado { get; set; }
     public string? CaminhoLogotipo { get; set; }
     public string? UrlLogotipo { get; set; }
+    public string? CaminhoImagemFundo { get; set; }
+    public string? UrlImagemFundo { get; set; }
     public string CaminhoBaseArmazenamento { get; set; } = string.Empty;
     public string PastaXml { get; set; } = string.Empty;
     public string PastaCertificados { get; set; } = string.Empty;

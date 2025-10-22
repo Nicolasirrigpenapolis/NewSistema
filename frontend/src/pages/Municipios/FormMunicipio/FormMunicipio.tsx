@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { GenericForm } from '../../../components/UI/feedback/GenericForm';
-import { municipioConfig } from '../../../components/Municipios/MunicipioConfig';
+import { municipioConfig, MunicipioFormData } from '../../../components/Municipios/MunicipioConfig';
+import { FormPageLayout } from '../../../components/UI/layout/FormPageLayout';
 import { entitiesService } from '../../../services/entitiesService';
-import { Icon } from '../../../ui';
+import { cleanNumericString } from '../../../utils/formatters';
 
-interface Municipio {
+interface MunicipioRecord {
   id?: number;
   codigo: number;
   nome: string;
@@ -14,7 +15,11 @@ interface Municipio {
 }
 
 interface LocationState {
-  municipio?: Municipio;
+  municipio?: MunicipioRecord;
+}
+
+interface MunicipioFormState extends MunicipioFormData {
+  id?: number;
 }
 
 export function FormMunicipio() {
@@ -25,7 +30,7 @@ export function FormMunicipio() {
   const isEdit = Boolean(id);
   const municipioFromState = (location.state as LocationState | undefined)?.municipio;
 
-  const [initialData, setInitialData] = useState<Municipio | null>(null);
+  const [initialData, setInitialData] = useState<MunicipioFormState | null>(null);
   const [loading, setLoading] = useState<boolean>(isEdit);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,11 +41,7 @@ export function FormMunicipio() {
       if (!isEdit) {
         if (isMounted) {
           setInitialData({
-            ...(municipioConfig.form.defaultValues as Municipio),
-            codigo: 0,
-            nome: '',
-            uf: '',
-            ativo: true
+            ...(municipioConfig.form.defaultValues as MunicipioFormState)
           });
           setLoading(false);
         }
@@ -48,7 +49,13 @@ export function FormMunicipio() {
       }
 
       if (municipioFromState && isMounted) {
-        setInitialData(municipioFromState);
+        setInitialData({
+          id: municipioFromState.id,
+          codigo: municipioFromState.codigo ? String(municipioFromState.codigo) : '',
+          nome: municipioFromState.nome ?? '',
+          uf: municipioFromState.uf ?? '',
+          ativo: municipioFromState.ativo ?? true
+        });
       }
 
       try {
@@ -58,7 +65,15 @@ export function FormMunicipio() {
         if (!isMounted) return;
 
         if (resposta.sucesso && resposta.dados) {
-          setInitialData(resposta.dados as Municipio);
+          const dadosMunicipio = resposta.dados as MunicipioRecord;
+
+          setInitialData({
+            id: dadosMunicipio.id,
+            codigo: dadosMunicipio.codigo ? String(dadosMunicipio.codigo) : '',
+            nome: dadosMunicipio.nome ?? '',
+            uf: dadosMunicipio.uf ?? '',
+            ativo: dadosMunicipio.ativo ?? true
+          });
           setError(null);
         } else {
           setError(resposta.mensagem || 'Não foi possível carregar os dados do município.');
@@ -90,14 +105,15 @@ export function FormMunicipio() {
     navigate('/municipios');
   };
 
-  const handleSave = async (dados: Municipio) => {
+  const handleSave = async (dados: MunicipioFormState) => {
     setError(null);
 
-    const payload: Municipio = {
-      ...dados,
-      codigo: Number(dados.codigo),
+  const codigoSanitizado = cleanNumericString(String(dados.codigo ?? ''));
+
+    const payload = {
+      codigo: Number(codigoSanitizado),
       nome: dados.nome?.trim(),
-      uf: dados.uf?.toUpperCase(),
+      uf: dados.uf?.trim().toUpperCase(),
       ativo: dados.ativo ?? true
     };
 
@@ -128,49 +144,19 @@ export function FormMunicipio() {
     ? municipioConfig.form.editSubtitle || municipioConfig.form.subtitle
     : municipioConfig.form.subtitle;
 
-  if (loading || (!initialData && isEdit)) {
-    return (
-      <div className="p-6 lg:p-10">
-        <div className="bg-card rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-6 flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
-          <p className="text-sm text-muted-foreground">Carregando dados do município...</p>
-          <button
-            onClick={handleBack}
-            className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-500 transition-colors"
-          >
-            <Icon name="arrow-left" size="sm" />
-            Voltar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 lg:p-10 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{pageTitle}</h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl">{pageSubtitle}</p>
-        </div>
-        <button
-          onClick={handleBack}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-card text-foreground hover:bg-background transition-colors"
-        >
-          <Icon name="arrow-left" size="sm" />
-          Voltar para lista
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg flex items-center gap-2">
-          <Icon name="exclamation-triangle" />
-          <span className="text-sm">{error}</span>
-        </div>
-      )}
-
+    <FormPageLayout
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      iconName={municipioConfig.form.headerIcon}
+      headerColor={municipioConfig.form.headerColor}
+      onBack={handleBack}
+      isLoading={loading || (!initialData && isEdit)}
+      loadingMessage="Carregando dados do município..."
+      error={error}
+    >
       {initialData && (
-        <GenericForm<Municipio>
+        <GenericForm<MunicipioFormState>
           data={initialData}
           sections={sections}
           isEditing={isEdit}
@@ -181,11 +167,11 @@ export function FormMunicipio() {
           onSave={handleSave}
           onCancel={handleBack}
           hideCancelButton={false}
-          submitLabel={isEdit ? 'Atualizar município' : 'Salvar município'}
+          submitLabel={isEdit ? 'Atualizar Município' : 'Cadastrar Município'}
           cancelLabel="Cancelar"
-          pageClassName="max-w-3xl mx-auto"
+          maxWidth="full"
         />
       )}
-    </div>
+    </FormPageLayout>
   );
 }

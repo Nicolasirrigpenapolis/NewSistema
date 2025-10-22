@@ -65,6 +65,9 @@ namespace Backend.Api.Data
                 entity.ToTable("Usuarios");
                 entity.HasKey(u => u.Id);
                 entity.HasIndex(u => u.UserName).IsUnique();
+                
+                // Índice na foreign key
+                entity.HasIndex(u => u.CargoId);
 
                 // Relacionamento com Cargo
                 entity.HasOne(u => u.Cargo)
@@ -112,6 +115,7 @@ namespace Backend.Api.Data
             {
                 entity.HasIndex(e => e.Cnpj).IsUnique().HasFilter("[Cnpj] IS NOT NULL");
                 entity.HasIndex(e => e.Cpf).IsUnique().HasFilter("[Cpf] IS NOT NULL");
+                entity.HasIndex(e => e.RazaoSocial); // Para buscas e filtros
             });
 
             // Municipio - CÃƒÂ³digo ÃƒÂºnico
@@ -124,6 +128,7 @@ namespace Backend.Api.Data
             builder.Entity<Condutor>(entity =>
             {
                 entity.HasIndex(e => e.Cpf).IsUnique();
+                entity.HasIndex(e => e.Nome); // Para buscas e filtros
             });
 
             // Veiculo - Placa ÃƒÂºnica
@@ -143,8 +148,20 @@ namespace Backend.Api.Data
             {
                 entity.HasIndex(e => e.ChaveAcesso).IsUnique().HasFilter("[ChaveAcesso] IS NOT NULL");
                 
-                // SÃƒÂ©rie e nÃƒÂºmero ÃƒÂºnicos por emitente
+                // Série e número únicos por emitente
                 entity.HasIndex(e => new { e.EmitenteId, e.Serie, e.NumeroMdfe }).IsUnique();
+                
+                // Índices nas foreign keys para performance
+                entity.HasIndex(m => m.CondutorId);
+                entity.HasIndex(m => m.VeiculoId);
+                entity.HasIndex(m => m.MunicipioCarregamentoId);
+                entity.HasIndex(m => m.ContratanteId);
+                entity.HasIndex(m => m.SeguradoraId);
+                
+                // Índices para filtros por data e status
+                entity.HasIndex(m => m.DataEmissao);
+                entity.HasIndex(m => m.DataInicioViagem);
+                entity.HasIndex(m => m.StatusSefaz);
                 
                 // ConfiguraÃƒÂ§ÃƒÂ£o de precisÃƒÂ£o para campos decimais
                 entity.Property(e => e.PesoBrutoTotal)
@@ -204,6 +221,10 @@ namespace Backend.Api.Data
             builder.Entity<MDFeCte>(entity =>
             {
                 entity.HasIndex(mc => mc.ChaveCte).IsUnique();
+                
+                // Índices nas foreign keys
+                entity.HasIndex(mc => mc.MDFeId);
+                entity.HasIndex(mc => mc.MunicipioDescargaId);
 
                 entity.HasOne(mc => mc.MDFe)
                     .WithMany(m => m.DocumentosCte)
@@ -220,6 +241,10 @@ namespace Backend.Api.Data
             builder.Entity<MDFeNfe>(entity =>
             {
                 entity.HasIndex(mn => mn.ChaveNfe).IsUnique();
+                
+                // Índices nas foreign keys
+                entity.HasIndex(mn => mn.MDFeId);
+                entity.HasIndex(mn => mn.MunicipioDescargaId);
 
                 entity.HasOne(mn => mn.MDFe)
                     .WithMany(m => m.DocumentosNfe)
@@ -235,6 +260,9 @@ namespace Backend.Api.Data
             // MDFeEvento
             builder.Entity<MDFeEvento>(entity =>
             {
+                // Índice na foreign key
+                entity.HasIndex(me => me.MDFeId);
+                
                 entity.HasOne(me => me.MDFe)
                     .WithMany(m => m.Eventos)
                     .HasForeignKey(me => me.MDFeId)
@@ -244,6 +272,9 @@ namespace Backend.Api.Data
             // MDFeUfPercurso
             builder.Entity<MDFeUfPercurso>(entity =>
             {
+                // Índice na foreign key
+                entity.HasIndex(mup => mup.MDFeId);
+                
                 entity.HasOne(mup => mup.MDFe)
                     .WithMany(m => m.UfsPercurso)
                     .HasForeignKey(mup => mup.MDFeId)
@@ -253,6 +284,10 @@ namespace Backend.Api.Data
             // MDFeLocalCarregamento
             builder.Entity<MDFeLocalCarregamento>(entity =>
             {
+                // Índices nas foreign keys
+                entity.HasIndex(mlc => mlc.MDFeId);
+                entity.HasIndex(mlc => mlc.MunicipioId);
+                
                 entity.HasOne(mlc => mlc.MDFe)
                     .WithMany(m => m.LocaisCarregamento)
                     .HasForeignKey(mlc => mlc.MDFeId)
@@ -267,6 +302,10 @@ namespace Backend.Api.Data
             // MDFeLocalDescarregamento
             builder.Entity<MDFeLocalDescarregamento>(entity =>
             {
+                // Índices nas foreign keys
+                entity.HasIndex(mld => mld.MDFeId);
+                entity.HasIndex(mld => mld.MunicipioId);
+                
                 entity.HasOne(mld => mld.MDFe)
                     .WithMany(m => m.LocaisDescarregamento)
                     .HasForeignKey(mld => mld.MDFeId)
@@ -281,12 +320,14 @@ namespace Backend.Api.Data
             // MDFeCondutor
             builder.Entity<MDFeCondutor>(entity =>
             {
+                // Índices
+                entity.HasIndex(mc => mc.MDFeId);
+                entity.HasIndex(mc => mc.CpfCondutor);
+                
                 entity.HasOne(mc => mc.MDFe)
                     .WithMany(m => m.CondutoresAdicionais)
                     .HasForeignKey(mc => mc.MDFeId)
                     .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasIndex(mc => mc.CpfCondutor);
             });
 
             // Contratante - CNPJ ou CPF ÃƒÂºnico
@@ -294,17 +335,22 @@ namespace Backend.Api.Data
             {
                 entity.HasIndex(c => c.Cnpj).IsUnique().HasFilter("[Cnpj] IS NOT NULL");
                 entity.HasIndex(c => c.Cpf).IsUnique().HasFilter("[Cpf] IS NOT NULL");
+                entity.HasIndex(c => c.RazaoSocial); // Para buscas e filtros
             });
 
-            // Seguradora - CNPJ ÃƒÂºnico
+            // Seguradora - CNPJ único
             builder.Entity<Seguradora>(entity =>
             {
                 entity.HasIndex(s => s.Cnpj).IsUnique();
+                entity.HasIndex(s => s.RazaoSocial); // Para buscas e filtros
             });
 
             // MDFeValePedagio
             builder.Entity<MDFeValePedagio>(entity =>
             {
+                // Índice na foreign key
+                entity.HasIndex(mv => mv.MDFeId);
+                
                 entity.HasOne(mv => mv.MDFe)
                     .WithMany(m => m.ValesPedagio)
                     .HasForeignKey(mv => mv.MDFeId)
@@ -313,6 +359,9 @@ namespace Backend.Api.Data
 
             builder.Entity<MDFePagamento>(entity =>
             {
+                // Índice na foreign key
+                entity.HasIndex(p => p.MDFeId);
+                
                 entity.HasOne(p => p.MDFe)
                     .WithMany(m => m.Pagamentos)
                     .HasForeignKey(p => p.MDFeId)
@@ -325,6 +374,9 @@ namespace Backend.Api.Data
 
             builder.Entity<MDFePagamentoComponente>(entity =>
             {
+                // Índice na foreign key
+                entity.HasIndex(c => c.PagamentoId);
+                
                 entity.HasOne(c => c.Pagamento)
                     .WithMany(p => p.Componentes)
                     .HasForeignKey(c => c.PagamentoId)
@@ -335,6 +387,9 @@ namespace Backend.Api.Data
 
             builder.Entity<MDFePagamentoPrazo>(entity =>
             {
+                // Índice na foreign key
+                entity.HasIndex(p => p.PagamentoId);
+                
                 entity.HasOne(p => p.Pagamento)
                     .WithMany(pag => pag.Prazos)
                     .HasForeignKey(p => p.PagamentoId)
@@ -345,6 +400,9 @@ namespace Backend.Api.Data
 
             builder.Entity<MDFePagamentoBanco>(entity =>
             {
+                // Índice na foreign key
+                entity.HasIndex(b => b.PagamentoId);
+                
                 entity.HasOne(b => b.Pagamento)
                     .WithMany(p => p.DadosBancarios)
                     .HasForeignKey(b => b.PagamentoId)
@@ -373,6 +431,9 @@ namespace Backend.Api.Data
 
             builder.Entity<MDFeUnidadeTransporte>(entity =>
             {
+                // Índice na foreign key
+                entity.HasIndex(ut => ut.MDFeId);
+                
                 entity.HasOne(ut => ut.MDFe)
                     .WithMany(m => m.UnidadesTransporte)
                     .HasForeignKey(ut => ut.MDFeId)
@@ -391,6 +452,10 @@ namespace Backend.Api.Data
 
             builder.Entity<MDFeUnidadeCarga>(entity =>
             {
+                // Índices nas foreign keys
+                entity.HasIndex(uc => uc.MDFeId);
+                entity.HasIndex(uc => uc.MDFeUnidadeTransporteId);
+                
                 entity.HasOne(uc => uc.MDFe)
                     .WithMany(m => m.UnidadesCarga)
                     .HasForeignKey(uc => uc.MDFeId)
@@ -404,6 +469,9 @@ namespace Backend.Api.Data
 
             builder.Entity<MDFeLacreUnidadeTransporte>(entity =>
             {
+                // Índice na foreign key
+                entity.HasIndex(l => l.MDFeUnidadeTransporteId);
+                
                 entity.HasOne(l => l.UnidadeTransporte)
                     .WithMany(ut => ut.Lacres)
                     .HasForeignKey(l => l.MDFeUnidadeTransporteId)
@@ -414,6 +482,10 @@ namespace Backend.Api.Data
             builder.Entity<MDFeMdfeTransp>(entity =>
             {
                 entity.HasIndex(mmt => mmt.ChaveMdfeTransp).IsUnique();
+                
+                // Índices nas foreign keys
+                entity.HasIndex(mmt => mmt.MDFeId);
+                entity.HasIndex(mmt => mmt.MunicipioDescargaId);
 
                 entity.HasOne(mmt => mmt.MDFe)
                     .WithMany(m => m.DocumentosMdfeTransp)
@@ -437,6 +509,7 @@ namespace Backend.Api.Data
                 entity.HasIndex(f => f.Cnpj).IsUnique().HasFilter("[Cnpj] IS NOT NULL");
                 entity.HasIndex(f => f.Cpf).IsUnique().HasFilter("[Cpf] IS NOT NULL");
                 entity.HasIndex(f => f.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
+                entity.HasIndex(f => f.Nome); // Para buscas e filtros
             });
 
             // ManutencaoVeiculo
@@ -444,6 +517,13 @@ namespace Backend.Api.Data
             {
                 entity.Property(m => m.ValorMaoObra)
                     .HasColumnType("decimal(18,2)");
+                
+                // Índices nas foreign keys
+                entity.HasIndex(m => m.VeiculoId);
+                entity.HasIndex(m => m.FornecedorId);
+                
+                // Índice para filtros por data
+                entity.HasIndex(m => m.DataManutencao);
 
                 entity.HasOne(m => m.Veiculo)
                     .WithMany()
@@ -464,6 +544,9 @@ namespace Backend.Api.Data
 
                 entity.Property(p => p.ValorUnitario)
                     .HasColumnType("decimal(18,2)");
+                
+                // Índice na foreign key
+                entity.HasIndex(p => p.ManutencaoId);
 
                 entity.HasOne(p => p.Manutencao)
                     .WithMany(m => m.Pecas)
@@ -474,6 +557,14 @@ namespace Backend.Api.Data
             // Viagem
             builder.Entity<Viagem>(entity =>
             {
+                // Índices nas foreign keys
+                entity.HasIndex(v => v.VeiculoId);
+                entity.HasIndex(v => v.CondutorId);
+                
+                // Índices para filtros e ordenação
+                entity.HasIndex(v => v.DataInicio);
+                entity.HasIndex(v => v.DataFim);
+                
                 entity.HasOne(v => v.Veiculo)
                     .WithMany()
                     .HasForeignKey(v => v.VeiculoId)
@@ -486,9 +577,27 @@ namespace Backend.Api.Data
                 entity.Property(d => d.Valor)
                     .HasColumnType("decimal(18,2)");
 
+                // Índice na foreign key para melhor performance
+                entity.HasIndex(d => d.ViagemId);
+
                 entity.HasOne(d => d.Viagem)
                     .WithMany(v => v.Despesas)
                     .HasForeignKey(d => d.ViagemId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ReceitaViagem
+            builder.Entity<ReceitaViagem>(entity =>
+            {
+                entity.Property(r => r.Valor)
+                    .HasColumnType("decimal(18,2)");
+
+                // Índice na foreign key para melhor performance
+                entity.HasIndex(r => r.ViagemId);
+
+                entity.HasOne(r => r.Viagem)
+                    .WithMany(v => v.Receitas)
+                    .HasForeignKey(r => r.ViagemId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -499,7 +608,7 @@ namespace Backend.Api.Data
             if (!optionsBuilder.IsConfigured)
             {
                 // Fallback se nÃƒÂ£o configurado via DI
-                optionsBuilder.UseSqlServer("Server=localhost;Database=SistemaDesenvolvimento;Trusted_Connection=true;TrustServerCertificate=true;");
+                optionsBuilder.UseSqlServer("Server=localhost\\SQLEXPRESS02;Database=SistemaDesenvolvimento;Trusted_Connection=true;TrustServerCertificate=true;");
             }
         }
     }

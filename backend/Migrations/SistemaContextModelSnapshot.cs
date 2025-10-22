@@ -119,6 +119,8 @@ namespace Backend.Api.Migrations
                     b.HasIndex("Cpf")
                         .IsUnique();
 
+                    b.HasIndex("Nome");
+
                     b.ToTable("Condutores");
                 });
 
@@ -210,6 +212,8 @@ namespace Backend.Api.Migrations
                         .IsUnique()
                         .HasFilter("[Cpf] IS NOT NULL");
 
+                    b.HasIndex("RazaoSocial");
+
                     b.ToTable("Contratantes");
                 });
 
@@ -277,6 +281,10 @@ namespace Backend.Api.Migrations
                     b.Property<string>("CaminhoCertificadoDigital")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CaminhoImagemFundo")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("CaminhoLogotipo")
                         .HasMaxLength(256)
@@ -384,6 +392,8 @@ namespace Backend.Api.Migrations
                         .IsUnique()
                         .HasFilter("[Cpf] IS NOT NULL");
 
+                    b.HasIndex("RazaoSocial");
+
                     b.ToTable("Empresas");
                 });
 
@@ -464,6 +474,10 @@ namespace Backend.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Observacoes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("Telefone")
                         .HasMaxLength(15)
                         .HasColumnType("nvarchar(15)");
@@ -485,6 +499,8 @@ namespace Backend.Api.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasFilter("[Email] IS NOT NULL");
+
+                    b.HasIndex("Nome");
 
                     b.ToTable("Fornecedores");
                 });
@@ -1024,9 +1040,15 @@ namespace Backend.Api.Migrations
 
                     b.HasIndex("ContratanteId");
 
+                    b.HasIndex("DataEmissao");
+
+                    b.HasIndex("DataInicioViagem");
+
                     b.HasIndex("MunicipioCarregamentoId");
 
                     b.HasIndex("SeguradoraId");
+
+                    b.HasIndex("StatusSefaz");
 
                     b.HasIndex("VeiculoId");
 
@@ -2142,6 +2164,8 @@ namespace Backend.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DataManutencao");
+
                     b.HasIndex("FornecedorId");
 
                     b.HasIndex("VeiculoId");
@@ -2359,6 +2383,8 @@ namespace Backend.Api.Migrations
                     b.HasIndex("Cnpj")
                         .IsUnique();
 
+                    b.HasIndex("RazaoSocial");
+
                     b.ToTable("Seguradoras");
                 });
 
@@ -2507,6 +2533,10 @@ namespace Backend.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CondutorId");
+
+                    b.HasIndex("DataFim");
+
+                    b.HasIndex("DataInicio");
 
                     b.HasIndex("VeiculoId");
 

@@ -7,6 +7,7 @@ interface PermissionContextType {
   hasAnyPermission: (permissions: string[]) => boolean;
   hasAllPermissions: (permissions: string[]) => boolean;
   loading: boolean;
+  refresh: () => Promise<void>;
 }
 
 const PermissionContext = createContext<PermissionContextType | undefined>(undefined);

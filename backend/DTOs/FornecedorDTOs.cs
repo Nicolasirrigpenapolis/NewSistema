@@ -6,8 +6,8 @@ namespace Backend.Api.DTOs
     {
         public int Id { get; set; }
         public string Nome { get; set; } = string.Empty;
-        public string? Cnpj { get; set; }
-        public string? Cpf { get; set; }
+        public string? CnpjCpf { get; set; }
+        public string TipoPessoa { get; set; } = "J"; // J = Jurídica, F = Física
         public string? Telefone { get; set; }
         public string? Email { get; set; }
         public string? Cidade { get; set; }
@@ -20,6 +20,7 @@ namespace Backend.Api.DTOs
     {
         public string? Endereco { get; set; }
         public string? Cep { get; set; }
+        public string? Observacoes { get; set; }
         public DateTime? DataUltimaAlteracao { get; set; }
         public int TotalManutencoes { get; set; }
         public decimal ValorTotalManutencoes { get; set; }
@@ -31,11 +32,11 @@ namespace Backend.Api.DTOs
         [StringLength(100, ErrorMessage = "Nome deve ter no máximo 100 caracteres")]
         public string Nome { get; set; } = string.Empty;
 
-        [StringLength(14, ErrorMessage = "CNPJ deve ter no máximo 14 caracteres")]
-        public string? Cnpj { get; set; }
-
-        [StringLength(11, ErrorMessage = "CPF deve ter no máximo 11 caracteres")]
-        public string? Cpf { get; set; }
+        [StringLength(14, ErrorMessage = "CNPJ/CPF deve ter no máximo 14 caracteres")]
+        public string? CnpjCpf { get; set; }
+        
+        [Required(ErrorMessage = "Tipo de pessoa é obrigatório")]
+        public string TipoPessoa { get; set; } = "J"; // J = Jurídica, F = Física
 
         [StringLength(15, ErrorMessage = "Telefone deve ter no máximo 15 caracteres")]
         public string? Telefone { get; set; }
@@ -55,6 +56,9 @@ namespace Backend.Api.DTOs
 
         [StringLength(8, ErrorMessage = "CEP deve ter no máximo 8 caracteres")]
         public string? Cep { get; set; }
+
+        [StringLength(500, ErrorMessage = "Observações deve ter no máximo 500 caracteres")]
+        public string? Observacoes { get; set; }
     }
 
     public class FornecedorUpdateDto : FornecedorCreateDto

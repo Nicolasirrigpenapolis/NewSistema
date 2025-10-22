@@ -12,6 +12,7 @@ namespace Backend.Api.Interfaces
         Task<bool> DeleteMDFeAsync(int id);
         Task<int> GetProximoNumeroAsync(string? emitenteCnpj = null);
         Task<MDFe> CreateMDFeAsync(MDFeCreateDto mdfeDto);
+        Task<MDFe> CreateBlankMDFeAsync();
         Task<MDFe> SalvarRascunhoAsync(SalvarRascunhoDto rascunhoDto);
     }
 }

@@ -17,6 +17,34 @@ namespace Backend.Api.Controllers
         {
         }
 
+        /// <summary>
+        /// Endpoint para obter fornecedores como opções para combobox
+        /// </summary>
+        [HttpGet("options")]
+        public async Task<ActionResult<ApiResponse<List<EntityOption>>>> GetOptions()
+        {
+            try
+            {
+                var fornecedores = await _context.Fornecedores
+                    .Where(f => f.Ativo)
+                    .OrderBy(f => f.Nome)
+                    .Select(f => new EntityOption
+                    {
+                        Id = f.Id.ToString(),
+                        Label = f.Nome,
+                        Description = f.Cidade != null && f.Uf != null ? $"{f.Cidade}/{f.Uf}" : null
+                    })
+                    .ToListAsync();
+
+                return Ok(ApiResponse<List<EntityOption>>.CreateSuccess(fornecedores, "Fornecedores obtidos com sucesso"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter opções de fornecedores");
+                return StatusCode(500, ApiResponse<List<EntityOption>>.CreateError("Erro interno do servidor"));
+            }
+        }
+
         protected override DbSet<Fornecedor> GetDbSet()
         {
             return _context.Fornecedores;
@@ -24,12 +52,13 @@ namespace Backend.Api.Controllers
 
         protected override FornecedorListDto EntityToListDto(Fornecedor entity)
         {
+            var isPessoaJuridica = !string.IsNullOrEmpty(entity.Cnpj);
             return new FornecedorListDto
             {
                 Id = entity.Id,
                 Nome = entity.Nome,
-                Cnpj = entity.Cnpj,
-                Cpf = entity.Cpf,
+                CnpjCpf = isPessoaJuridica ? entity.Cnpj : entity.Cpf,
+                TipoPessoa = isPessoaJuridica ? "J" : "F",
                 Telefone = entity.Telefone,
                 Email = entity.Email,
                 Cidade = entity.Cidade,
@@ -43,19 +72,21 @@ namespace Backend.Api.Controllers
         {
             var totalManutencoes = entity.Manutencoes?.Count ?? 0;
             var valorTotalManutencoes = entity.Manutencoes?.Sum(m => m.ValorTotal) ?? 0;
+            var isPessoaJuridica = !string.IsNullOrEmpty(entity.Cnpj);
 
             return new FornecedorDetailDto
             {
                 Id = entity.Id,
                 Nome = entity.Nome,
-                Cnpj = entity.Cnpj,
-                Cpf = entity.Cpf,
+                CnpjCpf = isPessoaJuridica ? entity.Cnpj : entity.Cpf,
+                TipoPessoa = isPessoaJuridica ? "J" : "F",
                 Telefone = entity.Telefone,
                 Email = entity.Email,
                 Endereco = entity.Endereco,
                 Cidade = entity.Cidade,
                 Uf = entity.Uf,
                 Cep = entity.Cep,
+                Observacoes = entity.Observacoes,
                 Ativo = entity.Ativo,
                 DataCriacao = entity.DataCriacao,
                 DataUltimaAlteracao = entity.DataUltimaAlteracao,
@@ -66,17 +97,21 @@ namespace Backend.Api.Controllers
 
         protected override Fornecedor CreateDtoToEntity(FornecedorCreateDto dto)
         {
+            var documentoLimpo = !string.IsNullOrEmpty(dto.CnpjCpf) ? DocumentValidator.RemoverFormatacao(dto.CnpjCpf) : null;
+            var isPessoaJuridica = dto.TipoPessoa?.ToUpper() == "J";
+            
             return new Fornecedor
             {
                 Nome = dto.Nome,
-                Cnpj = !string.IsNullOrEmpty(dto.Cnpj) ? DocumentValidator.RemoverFormatacao(dto.Cnpj) : null,
-                Cpf = !string.IsNullOrEmpty(dto.Cpf) ? DocumentValidator.RemoverFormatacao(dto.Cpf) : null,
+                Cnpj = isPessoaJuridica ? documentoLimpo : null,
+                Cpf = !isPessoaJuridica ? documentoLimpo : null,
                 Telefone = dto.Telefone,
                 Email = dto.Email,
                 Endereco = dto.Endereco,
                 Cidade = dto.Cidade,
                 Uf = dto.Uf,
                 Cep = dto.Cep,
+                Observacoes = dto.Observacoes,
                 Ativo = true,
                 DataCriacao = DateTime.Now
             };
@@ -84,15 +119,19 @@ namespace Backend.Api.Controllers
 
         protected override void UpdateEntityFromDto(Fornecedor entity, FornecedorUpdateDto dto)
         {
+            var documentoLimpo = !string.IsNullOrEmpty(dto.CnpjCpf) ? DocumentValidator.RemoverFormatacao(dto.CnpjCpf) : null;
+            var isPessoaJuridica = dto.TipoPessoa?.ToUpper() == "J";
+            
             entity.Nome = dto.Nome;
-            entity.Cnpj = !string.IsNullOrEmpty(dto.Cnpj) ? DocumentValidator.RemoverFormatacao(dto.Cnpj) : null;
-            entity.Cpf = !string.IsNullOrEmpty(dto.Cpf) ? DocumentValidator.RemoverFormatacao(dto.Cpf) : null;
+            entity.Cnpj = isPessoaJuridica ? documentoLimpo : null;
+            entity.Cpf = !isPessoaJuridica ? documentoLimpo : null;
             entity.Telefone = dto.Telefone;
             entity.Email = dto.Email;
             entity.Endereco = dto.Endereco;
             entity.Cidade = dto.Cidade;
             entity.Uf = dto.Uf;
             entity.Cep = dto.Cep;
+            entity.Observacoes = dto.Observacoes;
             entity.Ativo = dto.Ativo;
             entity.DataUltimaAlteracao = DateTime.Now;
         }
@@ -142,45 +181,51 @@ namespace Backend.Api.Controllers
 
         protected override async Task<(bool isValid, string errorMessage)> ValidateCreateAsync(FornecedorCreateDto dto)
         {
-            // Deve ter CNPJ ou CPF
-            if (string.IsNullOrEmpty(dto.Cnpj) && string.IsNullOrEmpty(dto.Cpf))
+            // Deve ter CnpjCpf
+            if (string.IsNullOrEmpty(dto.CnpjCpf))
             {
                 return (false, "Fornecedor deve ter CNPJ ou CPF");
             }
 
+            var documentoLimpo = DocumentValidator.RemoverFormatacao(dto.CnpjCpf);
+            var isPessoaJuridica = dto.TipoPessoa?.ToUpper() == "J";
+
             // ✅ VALIDAÇÃO DE CNPJ (Backend valida, não confia no frontend!)
-            if (!string.IsNullOrEmpty(dto.Cnpj))
+            if (isPessoaJuridica)
             {
-                if (!DocumentValidator.ValidarCnpj(dto.Cnpj))
+                if (documentoLimpo.Length != 14)
+                {
+                    return (false, "CNPJ deve ter 14 dígitos");
+                }
+
+                if (!DocumentValidator.ValidarCnpj(dto.CnpjCpf))
                 {
                     return (false, "CNPJ inválido");
                 }
 
-                // Normalizar CNPJ (remover formatação antes de salvar)
-                var cnpjLimpo = DocumentValidator.RemoverFormatacao(dto.Cnpj);
-
                 var cnpjExists = await _context.Fornecedores
-                    .AnyAsync(f => f.Cnpj == cnpjLimpo);
+                    .AnyAsync(f => f.Cnpj == documentoLimpo);
 
                 if (cnpjExists)
                 {
                     return (false, "CNPJ já cadastrado para outro fornecedor");
                 }
             }
-
             // ✅ VALIDAÇÃO DE CPF (Backend valida, não confia no frontend!)
-            if (!string.IsNullOrEmpty(dto.Cpf))
+            else
             {
-                if (!DocumentValidator.ValidarCpf(dto.Cpf))
+                if (documentoLimpo.Length != 11)
+                {
+                    return (false, "CPF deve ter 11 dígitos");
+                }
+
+                if (!DocumentValidator.ValidarCpf(dto.CnpjCpf))
                 {
                     return (false, "CPF inválido");
                 }
 
-                // Normalizar CPF (remover formatação antes de salvar)
-                var cpfLimpo = DocumentValidator.RemoverFormatacao(dto.Cpf);
-
                 var cpfExists = await _context.Fornecedores
-                    .AnyAsync(f => f.Cpf == cpfLimpo);
+                    .AnyAsync(f => f.Cpf == documentoLimpo);
 
                 if (cpfExists)
                 {
@@ -204,45 +249,51 @@ namespace Backend.Api.Controllers
 
         protected override async Task<(bool isValid, string errorMessage)> ValidateUpdateAsync(Fornecedor entity, FornecedorUpdateDto dto)
         {
-            // Deve ter CNPJ ou CPF
-            if (string.IsNullOrEmpty(dto.Cnpj) && string.IsNullOrEmpty(dto.Cpf))
+            // Deve ter CnpjCpf
+            if (string.IsNullOrEmpty(dto.CnpjCpf))
             {
                 return (false, "Fornecedor deve ter CNPJ ou CPF");
             }
 
+            var documentoLimpo = DocumentValidator.RemoverFormatacao(dto.CnpjCpf);
+            var isPessoaJuridica = dto.TipoPessoa?.ToUpper() == "J";
+
             // ✅ VALIDAÇÃO DE CNPJ (Backend valida, não confia no frontend!)
-            if (!string.IsNullOrEmpty(dto.Cnpj))
+            if (isPessoaJuridica)
             {
-                if (!DocumentValidator.ValidarCnpj(dto.Cnpj))
+                if (documentoLimpo.Length != 14)
+                {
+                    return (false, "CNPJ deve ter 14 dígitos");
+                }
+
+                if (!DocumentValidator.ValidarCnpj(dto.CnpjCpf))
                 {
                     return (false, "CNPJ inválido");
                 }
 
-                // Normalizar CNPJ (remover formatação antes de comparar)
-                var cnpjLimpo = DocumentValidator.RemoverFormatacao(dto.Cnpj);
-
                 var cnpjExists = await _context.Fornecedores
-                    .AnyAsync(f => f.Cnpj == cnpjLimpo && f.Id != entity.Id);
+                    .AnyAsync(f => f.Cnpj == documentoLimpo && f.Id != entity.Id);
 
                 if (cnpjExists)
                 {
                     return (false, "CNPJ já cadastrado para outro fornecedor");
                 }
             }
-
             // ✅ VALIDAÇÃO DE CPF (Backend valida, não confia no frontend!)
-            if (!string.IsNullOrEmpty(dto.Cpf))
+            else
             {
-                if (!DocumentValidator.ValidarCpf(dto.Cpf))
+                if (documentoLimpo.Length != 11)
+                {
+                    return (false, "CPF deve ter 11 dígitos");
+                }
+
+                if (!DocumentValidator.ValidarCpf(dto.CnpjCpf))
                 {
                     return (false, "CPF inválido");
                 }
 
-                // Normalizar CPF (remover formatação antes de comparar)
-                var cpfLimpo = DocumentValidator.RemoverFormatacao(dto.Cpf);
-
                 var cpfExists = await _context.Fornecedores
-                    .AnyAsync(f => f.Cpf == cpfLimpo && f.Id != entity.Id);
+                    .AnyAsync(f => f.Cpf == documentoLimpo && f.Id != entity.Id);
 
                 if (cpfExists)
                 {

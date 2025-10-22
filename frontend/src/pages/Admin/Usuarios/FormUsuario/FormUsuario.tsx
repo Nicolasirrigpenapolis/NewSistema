@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { GenericForm } from '../../../../components/UI/feedback/GenericForm';
 import { createUsuarioConfigWithCargos } from '../../../../components/Usuarios/UsuarioConfigWithCargos';
+import { FormPageLayout } from '../../../../components/UI/layout/FormPageLayout';
 import { cargosService, Cargo } from '../../../../services/cargosService';
 import { Icon } from '../../../../ui';
 import { authService } from '../../../../services/authService';
@@ -31,6 +32,7 @@ export function FormUsuario() {
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [loading, setLoading] = useState<boolean>(!usuarioFromState && isEdit);
   const [error, setError] = useState<string | null>(null);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -69,28 +71,102 @@ export function FormUsuario() {
   }, [id, isEdit, usuarioFromState]);
 
   const usuarioConfig = useMemo(() => {
-  const options = cargos.filter(c => c.ativo !== false).map(c => ({ value: c.id, label: c.nome }));
+    const options = cargos.filter(c => c.ativo !== false).map(c => ({ value: c.id, label: c.nome }));
     return createUsuarioConfigWithCargos(options);
   }, [cargos]);
+
+  const pageTitle = isEdit
+    ? usuarioConfig.form.editTitle || usuarioConfig.form.title
+    : usuarioConfig.form.title;
+
+  const pageSubtitle = isEdit
+    ? usuarioConfig.form.editSubtitle || usuarioConfig.form.subtitle
+    : usuarioConfig.form.subtitle;
 
   const handleBack = () => navigate('/admin/usuarios');
 
   const handleSave = async (dados: any) => {
     setError(null);
+    setValidationWarnings([]);
+    
+    // Validações antes de salvar
+    const warnings: string[] = [];
+    
+    // Validar nome
+    if (dados.nome && dados.nome.trim().length < 3) {
+      warnings.push('⚠️ Nome muito curto. Recomendado pelo menos 3 caracteres.');
+    }
+    
+    // Validar email
+    if (dados.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(dados.email)) {
+        warnings.push('⚠️ Formato de e-mail inválido.');
+      }
+    }
+    
+    // Validar username
+    if (dados.username && dados.username.trim().length < 3) {
+      warnings.push('⚠️ Username muito curto. Recomendado pelo menos 3 caracteres.');
+    }
+    
+    if (dados.username && /\s/.test(dados.username)) {
+      warnings.push('⚠️ Username não deve conter espaços.');
+    }
+    
+    // Validar senha
+    if (!isEdit && dados.password && dados.password.length < 6) {
+      warnings.push('⚠️ Senha muito fraca. Recomendado pelo menos 6 caracteres.');
+    }
+    
+    if (isEdit && dados.password && dados.password.length > 0 && dados.password.length < 6) {
+      warnings.push('⚠️ Nova senha muito fraca. Recomendado pelo menos 6 caracteres.');
+    }
+    
+    // Validar cargo
+    if (!dados.cargoId) {
+      warnings.push('⚠️ Selecione um cargo para o usuário.');
+    }
+    
+    if (warnings.length > 0) {
+      setValidationWarnings(warnings);
+      setError('Corrija os avisos antes de salvar.');
+      throw new Error('Validação falhou');
+    }
+    
     try {
       if (isEdit && id) {
-        // No dedicated update API here; fallback: call register if password provided or navigate back
-        console.warn('Edição via formulário de página: operation may be limited.');
-        navigate('/admin/usuarios', { replace: true, state: { revalidate: true } });
+        // Atualizar usuário existente
+        const updateData: any = {
+          nome: dados.nome?.trim(),
+          email: dados.email?.trim(),
+          cargoId: dados.cargoId,
+          ativo: dados.ativo !== false
+        };
+
+        // Apenas incluir senha se foi preenchida
+        if (dados.password && dados.password.trim()) {
+          updateData.password = dados.password.trim();
+        }
+
+        const result = await authService.updateUser(Number(id), updateData);
+
+        if (result.sucesso) {
+          navigate('/admin/usuarios', { replace: true, state: { revalidate: true } });
+        } else {
+          setError(result.mensagem || 'Erro ao atualizar usuário');
+          throw new Error(result.mensagem || 'Erro');
+        }
         return;
       }
 
-      // criação
+      // Criação de novo usuário
       const result = await authService.register({
-        nome: dados.nome,
-        username: dados.username,
+        nome: dados.nome?.trim(),
+        username: dados.username?.trim(),
         password: dados.password || '',
-        cargoId: dados.cargoId
+        cargoId: dados.cargoId,
+        email: dados.email?.trim()
       } as any);
 
       if (result.sucesso) {
@@ -106,51 +182,57 @@ export function FormUsuario() {
     }
   };
 
-  const viewSections = useMemo(() => usuarioFromState || initialData ? usuarioConfig.view.getSections(usuarioFromState ?? initialData!) : [], [usuarioConfig, usuarioFromState, initialData]);
+  const viewSections = useMemo(() => {
+    if (!(usuarioFromState || initialData)) {
+      return [];
+    }
 
-  if (loading) {
-    return (
-      <div className="p-6 lg:p-10">
-        <div className="bg-card rounded-xl p-6 flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
+    return usuarioConfig.view.getSections(usuarioFromState ?? initialData!);
+  }, [usuarioConfig, usuarioFromState, initialData]);
+
+  const canRenderForm = !isEdit || Boolean(initialData);
+  const displayData = usuarioFromState ?? initialData;
 
   return (
-    <div className="p-6 lg:p-10 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{isEdit ? (usuarioConfig.form.editTitle || usuarioConfig.form.title) : usuarioConfig.form.title}</h1>
-          <p className="text-muted-foreground mt-2">{isEdit ? (usuarioConfig.form.editSubtitle || usuarioConfig.form.subtitle) : usuarioConfig.form.subtitle}</p>
-        </div>
-        <button onClick={handleBack} className="px-4 py-2 rounded-lg border bg-card">Voltar</button>
-      </div>
-
-      {error && <div className="bg-red-50 text-red-700 p-3 rounded">{error}</div>}
-
-      { (viewOnlyFromState && (usuarioFromState ?? initialData)) ? (
-        <div className="max-w-4xl mx-auto bg-card rounded-xl p-6">
-          {viewSections.map(section => (
-            <div key={section.title} className="mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${section.color}, ${section.bgColor})` }}>
-                  <Icon name={section.icon} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-foreground">{section.title}</h3>
-                  {section.subtitle && <p className="text-muted-foreground text-sm">{section.subtitle}</p>}
-                </div>
+    <FormPageLayout
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      iconName={usuarioConfig.form.headerIcon}
+      headerColor={usuarioConfig.form.headerColor}
+      onBack={handleBack}
+      isLoading={loading}
+      loadingMessage="Carregando dados do usuário..."
+      error={error}
+      showRequiredHint={!viewOnlyFromState}
+    >
+      {viewOnlyFromState && displayData ? (
+        <div className="max-w-4xl mx-auto space-y-6">
+          {viewSections.map((section, index) => (
+            <div key={section.title} className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+              {/* Header da seção sem ícone */}
+              <div 
+                className="px-6 py-4 border-b border-border"
+                style={{ background: `linear-gradient(to right, ${section.bgColor}20, ${section.bgColor}10)` }}
+              >
+                <h3 className="text-lg font-bold text-foreground">{section.title}</h3>
+                {section.subtitle && (
+                  <p className="text-muted-foreground text-sm mt-1">{section.subtitle}</p>
+                )}
               </div>
 
-              <div className="rounded-xl p-4 border" style={{ background: `linear-gradient(to bottom right, ${section.bgColor}15, ${section.bgColor}25)`, borderColor: `${section.color}30` }}>
-                <div className={`grid ${section.columns === 1 ? 'grid-cols-1' : section.columns === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
+              {/* Conteúdo da seção */}
+              <div className="p-6">
+                <div
+                  className={`grid ${section.columns === 1 ? 'grid-cols-1' : section.columns === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}
+                >
                   {section.fields.map(field => (
                     <div key={String(field.label)} className={field.colSpan === 2 ? 'col-span-2' : ''}>
-                      <label className="text-sm font-semibold text-foreground">{field.label}</label>
-                      <div className="mt-2 bg-card p-3 rounded">{(field as any).formatter ? (field as any).formatter((field as any).value) : ((field as any).value ?? 'N/A')}</div>
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
+                        {field.label}
+                      </label>
+                      <div className="text-base font-medium text-foreground bg-muted/30 px-4 py-3 rounded-lg border border-border/50">
+                        {(field as any).formatter ? (field as any).formatter((field as any).value) : ((field as any).value ?? 'N/A')}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -159,19 +241,67 @@ export function FormUsuario() {
           ))}
         </div>
       ) : (
-        <GenericForm<any>
-          data={initialData ?? (usuarioConfig.form.defaultValues as any)}
-          sections={usuarioConfig.form.getSections(initialData ?? undefined)}
-          isEditing={isEdit}
-          title={isEdit ? (usuarioConfig.form.editTitle || usuarioConfig.form.title) : usuarioConfig.form.title}
-          subtitle={isEdit ? (usuarioConfig.form.editSubtitle || usuarioConfig.form.subtitle) : usuarioConfig.form.subtitle}
-          headerIcon={usuarioConfig.form.headerIcon}
-          headerColor={usuarioConfig.form.headerColor}
-          onSave={handleSave}
-          onCancel={handleBack}
-          pageClassName="max-w-3xl mx-auto"
-        />
+        canRenderForm && (
+          <div className="space-y-4">
+            {/* Card de avisos de validação */}
+            {validationWarnings.length > 0 && (
+              <div className="max-w-4xl mx-auto bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center mt-0.5">
+                    <Icon name="exclamation-triangle" className="text-white text-sm" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-amber-900 dark:text-amber-100 mb-2">
+                      Atenção: Verifique os campos
+                    </h4>
+                    <ul className="space-y-1 text-sm text-amber-800 dark:text-amber-200">
+                      {validationWarnings.map((warning, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-amber-500 mt-0.5">•</span>
+                          <span>{warning}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Card informativo para novos usuários */}
+            {!isEdit && (
+              <div className="max-w-4xl mx-auto bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
+                    <Icon name="info-circle" className="text-white text-sm" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                      Criando novo usuário
+                    </h4>
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      O usuário receberá acesso ao sistema com as credenciais informadas. 
+                      Certifique-se de comunicar o username e senha ao novo usuário de forma segura.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <GenericForm<any>
+              data={initialData ?? (usuarioConfig.form.defaultValues as any)}
+              sections={usuarioConfig.form.getSections(initialData ?? undefined)}
+              isEditing={isEdit}
+              title={pageTitle}
+              subtitle={pageSubtitle}
+              headerIcon={usuarioConfig.form.headerIcon}
+              headerColor={usuarioConfig.form.headerColor}
+              onSave={handleSave}
+              onCancel={handleBack}
+              maxWidth="full"
+            />
+          </div>
+        )
       )}
-    </div>
+    </FormPageLayout>
   );
 }

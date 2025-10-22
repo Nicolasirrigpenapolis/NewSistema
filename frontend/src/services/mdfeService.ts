@@ -57,13 +57,23 @@ class MDFeService {
       console.error('Network Error:', error);
       return {
         sucesso: false,
-        mensagem: 'Erro de conexão com o servidor. Verifique sua internet.',
+        mensagem: 'Erro ao processar a requisição. Tente novamente.',
         codigoErro: 'NETWORK_ERROR'
       };
     }
   }
 
   // ===== MÉTODOS PRINCIPAIS =====
+
+  /**
+   * Criar novo MDF-e em branco (estado "Em Digitação")
+   * Retorna ID e dados básicos para edição
+   */
+  async novoMDFe(): Promise<RespostaAPI> {
+    return this.request('/mdfe/novo', {
+      method: 'POST'
+    });
+  }
 
   /**
    * Criar MDFe - dados diretos

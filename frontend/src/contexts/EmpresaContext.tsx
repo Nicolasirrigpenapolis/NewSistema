@@ -53,6 +53,21 @@ export function EmpresaProvider({ children }: EmpresaProviderProps) {
     void carregar();
   }, [carregar]);
 
+  // Monitorar mudanças na empresa selecionada no localStorage
+  useEffect(() => {
+    const handleEmpresaMudou = () => {
+      // Recarregar dados quando a empresa mudar
+      void carregar();
+    };
+
+    // Ouvir eventos customizados de mudança de empresa
+    window.addEventListener('empresaMudou', handleEmpresaMudou);
+
+    return () => {
+      window.removeEventListener('empresaMudou', handleEmpresaMudou);
+    };
+  }, [carregar]);
+
   const value = useMemo<EmpresaContextValue>(() => ({
     empresa,
     carregando,

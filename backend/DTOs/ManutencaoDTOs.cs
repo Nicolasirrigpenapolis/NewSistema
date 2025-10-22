@@ -8,6 +8,7 @@ namespace Backend.Api.DTOs
         public int VeiculoId { get; set; }
         public string VeiculoPlaca { get; set; } = string.Empty;
         public string VeiculoMarca { get; set; } = string.Empty;
+        public string VeiculoDescricao { get; set; } = string.Empty;
         public DateTime DataManutencao { get; set; }
         public string Descricao { get; set; } = string.Empty;
         public int? FornecedorId { get; set; }
@@ -99,6 +100,8 @@ namespace Backend.Api.DTOs
         public int PageSize { get; set; } = 10;
         public string? SortBy { get; set; } = "DataManutencao";
         public string? SortDirection { get; set; } = "desc";
+        public string? UsuarioSolicitante { get; set; }
+        public string? TituloRelatorio { get; set; }
     }
 
     public class RelatorioManutencaoItemDto
@@ -107,6 +110,7 @@ namespace Backend.Api.DTOs
         public DateTime DataManutencao { get; set; }
         public string VeiculoPlaca { get; set; } = string.Empty;
         public string VeiculoMarca { get; set; } = string.Empty;
+        public string VeiculoDescricao { get; set; } = string.Empty;
         public string Descricao { get; set; } = string.Empty;
         public string? FornecedorNome { get; set; }
         public decimal ValorMaoObra { get; set; }

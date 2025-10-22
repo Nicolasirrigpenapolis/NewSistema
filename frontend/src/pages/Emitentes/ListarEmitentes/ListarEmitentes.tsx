@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCNPJ, formatCPF } from '../../../utils/formatters';
 import { entitiesService } from '../../../services/entitiesService';
+import { buildCommonHeaders } from '../../../services/api';
 import Icon from '../../../components/UI/Icon';
 import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
 import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
@@ -107,7 +108,9 @@ export function ListarEmitentes() {
         params.append('Uf', uf);
       }
 
-      const response = await fetch(`${API_BASE_URL}/emitentes?${params}`);
+      const response = await fetch(`${API_BASE_URL}/emitentes?${params}`, {
+        headers: buildCommonHeaders()
+      });
 
       if (!response.ok) {
         throw new Error('Erro ao carregar emitentes');
@@ -217,7 +220,7 @@ export function ListarEmitentes() {
   if (carregando) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="w-full px-6 py-8">
+        <div className="w-full py-4">
           <div className="flex items-center justify-center py-16">
             <div className="flex items-center gap-4">
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -231,7 +234,7 @@ export function ListarEmitentes() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="w-full px-2 py-4">
+      <div className="w-full py-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">

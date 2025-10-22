@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ImportarIBGEModal } from '../../../components/Municipios/ImportarIBGEModal';
-import { Icon } from '../../../ui';
+import { buildCommonHeaders } from '../../../services/api';
+import Icon from '../../../components/UI/Icon';
+import { Icon as ThemedIcon } from '../../../ui';
 import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
 import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
 import { municipioConfig } from '../../../components/Municipios/MunicipioConfig';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface Municipio {
   id?: number;
@@ -15,10 +17,14 @@ interface Municipio {
 }
 
 interface PaginationData {
-  current: number;
-  pageSize: number;
-  total: number;
+  totalItems: number;
   totalPages: number;
+  currentPage: number;
+  pageSize: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startItem: number;
+  endItem: number;
 }
 
 interface FiltrosMunicipios {
@@ -28,117 +34,96 @@ interface FiltrosMunicipios {
 
 export function ListarMunicipios() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const [carregando, setCarregando] = useState(false);
 
-  // Estados temporários dos filtros (antes de aplicar)
+  // Estados temporários dos filtros
   const [termoBuscaTemp, setTermoBuscaTemp] = useState('');
-  const [filtrosTemp, setFiltrosTemp] = useState<FiltrosMunicipios>({
-    status: '',
-    uf: ''
-  });
+  const [filtroStatusTemp, setFiltroStatusTemp] = useState('');
+  const [filtroUfTemp, setFiltroUfTemp] = useState('');
 
   // Estados dos filtros aplicados
   const [termoBusca, setTermoBusca] = useState('');
-  const [filtros, setFiltros] = useState<FiltrosMunicipios>({
-    status: '',
-    uf: ''
-  });
+  const [filtroStatus, setFiltroStatus] = useState('');
+  const [filtroUf, setFiltroUf] = useState('');
 
-  // Estados da paginação
-  const [paginacao, setPaginacao] = useState<PaginationData>({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-    totalPages: 0
-  });
+  // Estados para paginação
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [tamanhoPagina, setTamanhoPagina] = useState(10);
+  const [paginacao, setPaginacao] = useState<PaginationData | null>(null);
 
-  // Estados de visualiza��o e exclus�o
+  // Estados dos modais
   const [municipioVisualizacao, setMunicipioVisualizacao] = useState<Municipio | null>(null);
   const [municipioExclusao, setMunicipioExclusao] = useState<Municipio | null>(null);
+
+  // Estados de loading
   const [excluindo, setExcluindo] = useState(false);
   const [importandoIBGE, setImportandoIBGE] = useState(false);
 
-  // Estado do modal de importa��o
-  const [modalImportacao, setModalImportacao] = useState(false);
-
-
-  // Estados do modal de importação
-
   useEffect(() => {
-    carregarMunicipios();
-  }, [paginacao.current, paginacao.pageSize, filtros, termoBusca]);
+    carregarMunicipios(paginaAtual, termoBusca, filtroStatus, filtroUf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginaAtual, tamanhoPagina, termoBusca, filtroStatus, filtroUf]);
 
-  const carregarMunicipios = async () => {
+  const carregarMunicipios = async (
+    pagina: number = paginaAtual,
+    busca: string = termoBusca,
+    status: string = filtroStatus,
+    uf: string = filtroUf
+  ) => {
     try {
       setCarregando(true);
 
-      // Conectar à API real de municípios
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:5001/api';
       const params = new URLSearchParams({
-        pageSize: paginacao.pageSize.toString(),
-        page: paginacao.current.toString()
+        Page: pagina.toString(),
+        PageSize: tamanhoPagina.toString()
       });
 
-      // API suporta apenas Search - então enviamos o termo de busca
-      if (termoBusca) {
-        params.append('search', termoBusca);
+      if (busca.trim()) {
+        params.append('Search', busca.trim());
       }
 
-      const url = `https://localhost:5001/api/municipios?${params.toString()}`;
-      console.log('Carregando municípios de:', url);
-
-      const response = await fetch(url);
-      console.log('Response status:', response.status);
+      const response = await fetch(`${API_BASE_URL}/municipios?${params}`, {
+        headers: buildCommonHeaders()
+      });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Erro ao carregar municípios:', response.status, errorText);
-        // Se não houver municípios cadastrados, mostrar lista vazia
         setMunicipios([]);
-        setPaginacao(prev => ({
-          ...prev,
-          total: 0,
-          totalPages: 0
-        }));
+        setPaginacao(null);
         return;
       }
 
-      const data = await response.json();
-      console.log('Dados recebidos da API:', data);
-
-      // API retorna ResultadoPaginado<Municipio> com propriedades em inglês
-      const municipiosArray = Array.isArray(data.items) ? data.items : [];
-      console.log('Municípios encontrados:', municipiosArray.length);
-
-      // Mapear dados da API para o formato esperado
-      const municipiosFormatados = municipiosArray.map((municipio: any) => ({
-        id: municipio.id,
-        codigo: municipio.codigo,
-        nome: municipio.nome,
-        uf: municipio.uf,
-        ativo: municipio.ativo
-      }));
+      const data: PaginationData & { items: Municipio[] } = await response.json();
 
       // Aplicar filtros de status e UF no frontend
-      let municipiosFiltrados = municipiosFormatados;
+      let municipiosFiltrados = data.items || [];
 
-      if (filtros.status) {
-        const ativo = filtros.status === 'ativo';
+      if (status) {
+        const ativo = status === 'ativo';
         municipiosFiltrados = municipiosFiltrados.filter(m => m.ativo === ativo);
       }
 
-      if (filtros.uf) {
-        municipiosFiltrados = municipiosFiltrados.filter(m => m.uf === filtros.uf);
+      if (uf) {
+        municipiosFiltrados = municipiosFiltrados.filter(m => m.uf === uf);
       }
 
       setMunicipios(municipiosFiltrados);
-      setPaginacao(prev => ({
-        ...prev,
-        total: data.totalItems || 0,
-        totalPages: data.totalPages || Math.ceil((data.totalItems || 0) / prev.pageSize)
-      }));
+      setPaginacao({
+        totalItems: data.totalItems,
+        totalPages: data.totalPages,
+        currentPage: data.currentPage,
+        pageSize: data.pageSize,
+        hasNextPage: data.hasNextPage,
+        hasPreviousPage: data.hasPreviousPage,
+        startItem: data.startItem,
+        endItem: data.endItem
+      });
     } catch (error) {
       console.error('Erro ao carregar municípios:', error);
+      setMunicipios([]);
+      setPaginacao(null);
     } finally {
       setCarregando(false);
     }
@@ -147,138 +132,107 @@ export function ListarMunicipios() {
 
 
   const aplicarFiltros = () => {
-    setFiltros(filtrosTemp);
     setTermoBusca(termoBuscaTemp);
-    setPaginacao(prev => ({ ...prev, current: 1 }));
+    setFiltroStatus(filtroStatusTemp);
+    setFiltroUf(filtroUfTemp);
+    setPaginaAtual(1);
   };
 
   const limparFiltros = () => {
-    setFiltrosTemp({
-      status: '',
-      uf: ''
-    });
     setTermoBuscaTemp('');
-    setFiltros({
-      status: '',
-      uf: ''
-    });
+    setFiltroStatusTemp('');
+    setFiltroUfTemp('');
     setTermoBusca('');
-    setPaginacao(prev => ({ ...prev, current: 1 }));
+    setFiltroStatus('');
+    setFiltroUf('');
+    setPaginaAtual(1);
   };
 
-  const abrirVisualizacao = (municipio: Municipio) => {
-  setMunicipioVisualizacao(municipio);
-};
+  const abrirNovo = () => navigate('/municipios/novo');
 
-const fecharVisualizacao = () => {
-  setMunicipioVisualizacao(null);
-};
+  const abrirEdicao = (municipio: Municipio) => {
+    if (municipio.id) {
+      navigate(`/municipios/${municipio.id}/editar`, { state: { municipio } });
+    } else {
+      navigate('/municipios/novo', { state: { municipio } });
+    }
+  };
 
-const navegarParaNovo = () => {
-  navigate('/municipios/novo');
-};
+  const abrirModalVisualizacao = (municipio: Municipio) => {
+    setMunicipioVisualizacao(municipio);
+  };
 
-const navegarParaEdicao = (municipio: Municipio) => {
-  if (!municipio.id) {
-    navigate('/municipios/novo');
-    return;
-  }
-
-  navigate(`/municipios/${municipio.id}/editar`, { state: { municipio } });
-};
-
-const abrirModalImportacao = () => {
-  setModalImportacao(true);
-};
-
-const fecharModalImportacao = () => {
-  if (!importandoIBGE) {
-    setModalImportacao(false);
-  }
-};
-
-const abrirModalExclusao = (municipio: Municipio) => {
-  setMunicipioExclusao(municipio);
-};
-
-const fecharModalExclusao = () => {
-  if (!excluindo) {
+  const fecharModais = () => {
+    setMunicipioVisualizacao(null);
     setMunicipioExclusao(null);
-  }
-  setExcluindo(false);
-};
+  };
 
-const confirmarExclusao = async () => {
-  if (!municipioExclusao?.id) return;
+  const abrirModalExclusao = (municipio: Municipio) => {
+    setMunicipioExclusao(municipio);
+  };
 
-  try {
-    setExcluindo(true);
+  const handleDelete = async () => {
+    if (!municipioExclusao?.id) return;
 
-    const response = await fetch(`https://localhost:5001/api/municipios/${municipioExclusao.id}`, {
-      method: 'DELETE',
-    });
+    try {
+      setExcluindo(true);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'Erro ao excluir munic�pio');
-    }
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:5001/api';
+      const response = await fetch(`${API_BASE_URL}/municipios/${municipioExclusao.id}`, {
+        method: 'DELETE',
+        headers: buildCommonHeaders()
+      });
 
-    fecharModalExclusao();
-    carregarMunicipios();
-  } catch (error) {
-    console.error('Erro ao excluir munic�pio:', error);
-    alert('Erro ao excluir munic�pio. Tente novamente.');
-    setExcluindo(false);
-  }
-};
-
-const confirmarImportacao = async () => {
-  try {
-    setImportandoIBGE(true);
-
-    const response = await fetch('https://localhost:5001/api/municipios/importar-todos-ibge', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
+      if (!response.ok) {
+        throw new Error('Erro ao excluir município');
       }
-    });
 
-    if (!response.ok) {
-      throw new Error('Erro ao importar munic�pios do IBGE');
+      fecharModais();
+      carregarMunicipios();
+    } catch (error) {
+      console.error('Erro ao excluir município:', error);
+    } finally {
+      setExcluindo(false);
     }
+  };
 
-    const result = await response.json();
+  const importarTodosIBGE = async () => {
+    try {
+      setImportandoIBGE(true);
 
-    alert(`${result.municipiosImportados || 'Todos os'} munic�pios importados com sucesso!`);
-    carregarMunicipios();
-    setModalImportacao(false);
-  } catch (error) {
-    console.error('Erro ao importar munic�pios do IBGE:', error);
-    alert('Erro ao importar munic�pios do IBGE. Tente novamente.');
-  } finally {
-    setImportandoIBGE(false);
-  }
-};
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:5001/api';
+      
+      const response = await fetch(`${API_BASE_URL}/municipios/importar-todos-ibge`, {
+        method: 'POST',
+        headers: buildCommonHeaders()
+      });
 
-const alterarPagina = (novaPagina: number) => {
-  setPaginacao(prev => ({ ...prev, current: novaPagina }));
-};
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Erro do servidor:', errorData);
+        throw new Error('Erro ao importar municípios do IBGE');
+      }
 
-const alterarTamanhoPagina = (novoTamanho: number) => {
-  setPaginacao(prev => ({
-    ...prev,
-    pageSize: novoTamanho,
-    current: 1
-  }));
-};
+      const result = await response.json();
+      alert(`Importação concluída!\nInseridos: ${result.totalInseridos || 0}\nAtualizados: ${result.totalAtualizados || 0}\nIgnorados: ${result.totalIgnorados || 0}`);
+      carregarMunicipios();
+    } catch (error) {
+      console.error('Erro ao importar municípios do IBGE:', error);
+      alert('Erro ao importar municípios do IBGE. Tente novamente.');
+    } finally {
+      setImportandoIBGE(false);
+    }
+  };
 
-if (carregando) {
+  if (carregando) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-center py-16">
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-muted-foreground">Carregando municípios...</span>
+      <div className="min-h-screen bg-background">
+        <div className="w-full px-6 py-8">
+          <div className="flex items-center justify-center py-16">
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-8 border-4 border-lime-600 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-muted-foreground">Carregando municípios...</span>
+            </div>
           </div>
         </div>
       </div>
@@ -287,11 +241,16 @@ if (carregando) {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="w-full px-6 py-8">
+      <div className="w-full py-4">
+        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <i className="fas fa-map-marker-alt text-white text-xl"></i>
+            <div className="relative w-14 h-14 rounded-xl shadow-lg shadow-lime-600/30 overflow-hidden">
+              <span className="absolute inset-0 bg-gradient-to-br from-lime-700 via-lime-600 to-lime-500 dark:from-lime-600 dark:via-lime-500 dark:to-lime-400" aria-hidden="true" />
+              <span className="absolute inset-0 opacity-40 blur-lg bg-lime-600" aria-hidden="true" />
+              <div className="relative h-full w-full flex items-center justify-center">
+                <ThemedIcon name="map-marker-alt" className="text-white text-2xl" />
+              </div>
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-1">Municípios</h1>
@@ -299,252 +258,297 @@ if (carregando) {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {user?.username === 'programador' && (
+              <button
+                className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                onClick={importarTodosIBGE}
+                disabled={importandoIBGE}
+              >
+                <Icon name={importandoIBGE ? "spinner" : "download"} size="lg" />
+                <span>{importandoIBGE ? 'Importando...' : 'Importar IBGE'}</span>
+              </button>
+            )}
             <button
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-              onClick={abrirModalImportacao}
-              disabled={importandoIBGE}
+              className="px-6 py-3 bg-gradient-to-r from-lime-700 to-lime-600 hover:from-lime-800 hover:to-lime-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
+              onClick={abrirNovo}
             >
-              <i className={importandoIBGE ? "fas fa-spinner fa-spin text-lg" : "fas fa-download text-lg"}></i>
-              <span>{importandoIBGE ? 'Importando...' : 'Importar IBGE'}</span>
-            </button>
-            <button
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-              onClick={navegarParaNovo}
-            >
-              <i className="fas fa-plus text-lg"></i>
+              <Icon name="plus" size="lg" />
               <span>Novo Município</span>
             </button>
           </div>
         </div>
 
-      <div className="bg-card rounded-xl border border-border p-6 mb-6">
-        <div className="grid grid-cols-5 gap-4 items-end">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Status</label>
-            <select
-              value={filtrosTemp.status}
-              onChange={(e) => setFiltrosTemp({ ...filtrosTemp, status: e.target.value })}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">Todos</option>
-              <option value="ativo">Ativo</option>
-              <option value="inativo">Inativo</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">UF</label>
-            <select
-              value={filtrosTemp.uf}
-              onChange={(e) => setFiltrosTemp({ ...filtrosTemp, uf: e.target.value })}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">Todas</option>
-              <option value="SP">São Paulo</option>
-              <option value="RJ">Rio de Janeiro</option>
-              <option value="MG">Minas Gerais</option>
-              <option value="PR">Paraná</option>
-              <option value="RS">Rio Grande do Sul</option>
-              <option value="SC">Santa Catarina</option>
-              <option value="BA">Bahia</option>
-              <option value="GO">Goiás</option>
-              <option value="PE">Pernambuco</option>
-              <option value="CE">Ceará</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Buscar</label>
-            <input
-              type="text"
-              placeholder="Buscar por nome, código ou UF..."
-              value={termoBuscaTemp}
-              onChange={(e) => setTermoBuscaTemp(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && aplicarFiltros()}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          <div>
-            <button
-              className="w-full px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
-              onClick={aplicarFiltros}
-            >
-              <Icon name="search" />
-              Filtrar
-            </button>
-          </div>
-
-          <div>
-            <button
-              className="w-full px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-200 dark:border-red-800 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={limparFiltros}
-              disabled={!filtrosTemp.status && !filtrosTemp.uf && !termoBuscaTemp}
-            >
-              <Icon name="times" />
-              Limpar
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-card rounded-xl border border-border shadow-sm">
-        {municipios.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-6">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-              <i className="fas fa-map-marker-alt text-2xl text-muted-foreground"></i>
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum município encontrado</h3>
-            <p className="text-muted-foreground text-center">Adicione um novo município ou ajuste os filtros de busca.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <div className="grid grid-cols-5 gap-4 p-4 bg-muted border-b border-border font-semibold text-foreground">
-              <div className="text-center">Código IBGE</div>
-              <div className="text-center">Nome</div>
-              <div className="text-center">UF</div>
-              <div className="text-center">Status</div>
-              <div className="text-center">Ações</div>
+        {/* Filtros */}
+        <div className="bg-card rounded-lg border border-gray-200 dark:border-0 p-6 mb-6">
+          <div className="grid grid-cols-5 gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Buscar</label>
+              <input
+                type="text"
+                placeholder="Nome, código ou UF..."
+                value={termoBuscaTemp}
+                onChange={(e) => setTermoBuscaTemp(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && aplicarFiltros()}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-lime-600/20 focus:border-lime-600"
+              />
             </div>
 
-            {municipios.map((municipio) => (
-              <div key={municipio.id} className="grid grid-cols-5 gap-4 p-4 border-b border-border hover:bg-card-hover transition-colors duration-200">
-                <div className="text-center">
-                  <span className="text-foreground">{municipio.codigo}</span>
-                  <div className="text-sm text-muted-foreground">Código IBGE</div>
-                </div>
-                <div className="text-center">
-                  <strong className="text-foreground">{municipio.nome}</strong>
-                </div>
-                <div className="text-center">
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 rounded text-xs font-medium">{municipio.uf}</span>
-                </div>
-                <div className="text-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    municipio.ativo
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-                  }`}>
-                    {municipio.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <button
-                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200"
-                    onClick={() => abrirVisualizacao(municipio)}
-                    title="Visualizar"
-                  >
-                    <Icon name="eye" />
-                  </button>
-                  <button
-                    className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
-                    onClick={() => navegarParaEdicao(municipio)}
-                    title="Editar"
-                  >
-                    <Icon name="edit" />
-                  </button>
-                  <button
-                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200"
-                    onClick={() => abrirModalExclusao(municipio)}
-                    title="Excluir"
-                  >
-                    <Icon name="trash" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Paginação - só mostra se houver registros */}
-      {paginacao.total > 0 && (
-        <div className="mt-6 bg-card border-t border-border p-4">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-foreground">Itens por página:</label>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">UF</label>
               <select
-                className="px-3 py-1 border border-border rounded bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                value={paginacao.pageSize}
-                onChange={(e) => alterarTamanhoPagina(Number(e.target.value))}
+                value={filtroUfTemp}
+                onChange={(e) => setFiltroUfTemp(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-lime-600/20 focus:border-lime-600"
               >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
+                <option value="">Todas as UF</option>
+                <option value="AC">AC</option>
+                <option value="AL">AL</option>
+                <option value="AP">AP</option>
+                <option value="AM">AM</option>
+                <option value="BA">BA</option>
+                <option value="CE">CE</option>
+                <option value="DF">DF</option>
+                <option value="ES">ES</option>
+                <option value="GO">GO</option>
+                <option value="MA">MA</option>
+                <option value="MT">MT</option>
+                <option value="MS">MS</option>
+                <option value="MG">MG</option>
+                <option value="PA">PA</option>
+                <option value="PB">PB</option>
+                <option value="PR">PR</option>
+                <option value="PE">PE</option>
+                <option value="PI">PI</option>
+                <option value="RJ">RJ</option>
+                <option value="RN">RN</option>
+                <option value="RS">RS</option>
+                <option value="RO">RO</option>
+                <option value="RR">RR</option>
+                <option value="SC">SC</option>
+                <option value="SP">SP</option>
+                <option value="SE">SE</option>
+                <option value="TO">TO</option>
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                className="px-4 py-2 border border-border rounded-lg bg-card text-foreground hover:bg-card-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                onClick={() => alterarPagina(paginacao.current - 1)}
-                disabled={paginacao.current === 1}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Status</label>
+              <select
+                value={filtroStatusTemp}
+                onChange={(e) => setFiltroStatusTemp(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-lime-600/20 focus:border-lime-600"
               >
-                Anterior
-              </button>
+                <option value="">Todos os status</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+              </select>
+            </div>
 
-              <span className="px-4 py-2 text-foreground">
-                Página {paginacao.current} de {paginacao.totalPages}
-              </span>
-
+            <div>
               <button
-                className="px-4 py-2 border border-border rounded-lg bg-card text-foreground hover:bg-card-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                onClick={() => alterarPagina(paginacao.current + 1)}
-                disabled={paginacao.current === paginacao.totalPages}
+                onClick={aplicarFiltros}
+                className="w-full px-4 py-2 bg-lime-600 hover:bg-lime-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
               >
-                Próxima
+                <Icon name="search" />
+                Filtrar
               </button>
             </div>
 
-            <div className="text-sm text-muted-foreground">
-              Mostrando {((paginacao.current - 1) * paginacao.pageSize) + 1} a {Math.min(paginacao.current * paginacao.pageSize, paginacao.total)} de {paginacao.total} municípios
+            <div>
+              <button
+                onClick={limparFiltros}
+                className="w-full px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-200 dark:border-red-800 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!filtroStatusTemp && !filtroUfTemp && !termoBuscaTemp}
+              >
+                <Icon name="times" />
+                Limpar
+              </button>
             </div>
           </div>
         </div>
-      )}
 
-      {/* Componente de CRUD de Municípios */}
-            <GenericViewModal
-        isOpen={!!municipioVisualizacao}
-        onClose={fecharVisualizacao}
-        item={municipioVisualizacao}
-        title={municipioConfig.view.title}
-        subtitle={municipioConfig.view.subtitle}
-        headerIcon={municipioConfig.view.headerIcon}
-        headerColor={municipioConfig.view.headerColor}
-        sections={municipioVisualizacao ? municipioConfig.view.getSections(municipioVisualizacao) : []}
-        actions={municipioVisualizacao ? [{
-          label: 'Editar Munic�pio',
-          icon: 'edit',
-          variant: 'warning' as const,
-          onClick: () => {
-            if (municipioVisualizacao) {
-              fecharVisualizacao();
-              navegarParaEdicao(municipioVisualizacao);
-            }
-          },
-        }] : []}
-        statusConfig={municipioVisualizacao ? municipioConfig.view.getStatusConfig?.(municipioVisualizacao) : undefined}
-        idField={municipioConfig.view.idField}
-      />
-      <ConfirmDeleteModal
-        isOpen={!!municipioExclusao}
-        title="Excluir Munic�pio"
-        message="Tem certeza de que deseja excluir este munic�pio?"
-        itemName={municipioExclusao ? `${municipioExclusao.nome}/${municipioExclusao.uf}` : ''}
-        onConfirm={confirmarExclusao}
-        onClose={fecharModalExclusao}
-        loading={excluindo}
-      />
+        {/* Indicador de filtros ativos */}
+        {(termoBusca || filtroStatus || filtroUf) && (
+          <div className="bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-lg p-3 mb-4">
+            <div className="flex items-center gap-2">
+              <Icon name="filter" className="text-lime-700 dark:text-lime-400" />
+              <span className="text-sm font-medium text-lime-800 dark:text-lime-300">
+                Filtros ativos:
+                {termoBusca && <span className="ml-1 px-2 py-1 bg-lime-100 dark:bg-lime-800 rounded text-xs">{termoBusca}</span>}
+                {filtroUf && <span className="ml-1 px-2 py-1 bg-lime-100 dark:bg-lime-800 rounded text-xs">{filtroUf}</span>}
+                {filtroStatus && <span className="ml-1 px-2 py-1 bg-lime-100 dark:bg-lime-800 rounded text-xs">{filtroStatus === 'ativo' ? 'Ativo' : 'Inativo'}</span>}
+              </span>
+            </div>
+          </div>
+        )}
 
-      {/* Modal de Importação IBGE */}
-      <ImportarIBGEModal
-        isOpen={modalImportacao}
-        onClose={fecharModalImportacao}
-        onConfirm={confirmarImportacao}
-        isImporting={importandoIBGE}
-      />
+        {/* Tabela */}
+        <div className="bg-card rounded-lg border border-gray-200 dark:border-0 shadow-sm">
+          {municipios.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-6">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                <Icon name="map-marker-alt" className="text-2xl text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {(termoBusca || filtroStatus || filtroUf) ? 'Nenhum município encontrado com os filtros aplicados' : 'Nenhum município encontrado'}
+              </h3>
+              <p className="text-muted-foreground text-center">
+                {(termoBusca || filtroStatus || filtroUf) ? 'Tente ajustar os filtros ou limpar para ver todos os municípios.' : 'Adicione um novo município ou importe do IBGE para começar.'}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-5 gap-4 p-4 bg-background dark:bg-gray-800 border-b border-gray-200 dark:border-0 font-semibold text-foreground">
+                <div className="text-center">Código IBGE</div>
+                <div className="text-center">Nome</div>
+                <div className="text-center">UF</div>
+                <div className="text-center">Status</div>
+                <div className="text-center">Ações</div>
+              </div>
+
+              {municipios.map((municipio) => (
+                <div key={municipio.id} className="grid grid-cols-5 gap-4 p-4 border-b border-gray-200 dark:border-0 hover:bg-background dark:hover:bg-gray-700 transition-colors duration-200">
+                  <div className="text-center">
+                    <div className="font-medium text-foreground">{municipio.codigo}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Código IBGE</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-medium text-foreground">{municipio.nome}</div>
+                  </div>
+                  <div className="text-center flex justify-center">
+                    <span className="text-sm font-semibold text-lime-700 dark:text-lime-400">
+                      {municipio.uf}
+                    </span>
+                  </div>
+                  <div className="text-center flex justify-center">
+                    <span className={`text-sm font-semibold ${
+                      municipio.ativo
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {municipio.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
+                      onClick={() => abrirModalVisualizacao(municipio)}
+                      title="Visualizar"
+                    >
+                      <Icon name="eye" />
+                    </button>
+                    <button
+                      className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
+                      onClick={() => abrirEdicao(municipio)}
+                      title="Editar"
+                    >
+                      <Icon name="edit" />
+                    </button>
+                    <button
+                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
+                      onClick={() => abrirModalExclusao(municipio)}
+                      title="Excluir"
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Paginação */}
+        {paginacao && paginacao.totalItems > 0 && (
+          <div className="mt-6 bg-card border-t border-gray-200 dark:border-0 p-4 rounded-b-lg">
+            <div className="flex flex-row justify-between items-center gap-4">
+              <div className="text-sm text-muted-foreground text-left">
+                Mostrando {paginacao.startItem || ((paginacao.currentPage - 1) * paginacao.pageSize) + 1} até {paginacao.endItem || Math.min(paginacao.currentPage * paginacao.pageSize, paginacao.totalItems)} de {paginacao.totalItems} municípios
+              </div>
+
+              {paginacao.totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPaginaAtual(paginacao.currentPage - 1)}
+                    disabled={!paginacao.hasPreviousPage}
+                    className="px-4 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground hover:bg-background dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
+                  >
+                    Anterior
+                  </button>
+
+                  <span className="px-4 py-2 text-foreground font-medium text-sm whitespace-nowrap">
+                    {paginacao.currentPage} / {paginacao.totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => setPaginaAtual(paginacao.currentPage + 1)}
+                    disabled={!paginacao.hasNextPage}
+                    className="px-4 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground hover:bg-background dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-foreground">Itens por página:</label>
+                <select
+                  value={tamanhoPagina}
+                  onChange={(e) => {
+                    setTamanhoPagina(Number(e.target.value));
+                    setPaginaAtual(1);
+                  }}
+                  className="px-3 py-1 border border-gray-300 dark:border-0 rounded bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-lime-600/20 focus:border-lime-600"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de visualização */}
+        <GenericViewModal
+          isOpen={!!municipioVisualizacao}
+          onClose={fecharModais}
+          item={municipioVisualizacao}
+          title={municipioConfig.view.title}
+          subtitle={municipioConfig.view.subtitle}
+          headerIcon={municipioConfig.view.headerIcon}
+          headerColor={municipioConfig.view.headerColor}
+          sections={municipioVisualizacao ? municipioConfig.view.getSections(municipioVisualizacao) : []}
+          actions={
+            municipioVisualizacao
+              ? [
+                  {
+                    label: 'Editar Município',
+                    icon: 'edit',
+                    variant: 'warning' as const,
+                    onClick: () => {
+                      fecharModais();
+                      abrirEdicao(municipioVisualizacao);
+                    }
+                  }
+                ]
+              : []
+          }
+          statusConfig={municipioVisualizacao ? municipioConfig.view.getStatusConfig?.(municipioVisualizacao) : undefined}
+          idField={municipioConfig.view.idField}
+        />
+
+        {/* Modal de exclusão */}
+        <ConfirmDeleteModal
+          isOpen={!!municipioExclusao}
+          title="Excluir Município"
+          message="Tem certeza de que deseja excluir este município?"
+          itemName={municipioExclusao ? `${municipioExclusao.nome}/${municipioExclusao.uf}` : ''}
+          onConfirm={handleDelete}
+          onClose={fecharModais}
+          loading={excluindo}
+        />
       </div>
     </div>
   );

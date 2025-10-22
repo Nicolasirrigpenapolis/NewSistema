@@ -41,6 +41,8 @@ namespace Backend.Api.DTOs
         [Required]
         [MaxLength(2)]
         public string Uf { get; set; } = string.Empty;
+
+        public bool Ativo { get; set; } = true;
     }
 
     public class MunicipioUpdateDto

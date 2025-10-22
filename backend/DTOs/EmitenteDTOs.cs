@@ -60,6 +60,9 @@ namespace Backend.Api.DTOs
         [MaxLength(256, ErrorMessage = "Caminho do logotipo deve ter no mǭximo 256 caracteres")]
         public string? CaminhoLogotipo { get; set; }
 
+    [MaxLength(256, ErrorMessage = "Caminho da imagem de fundo deve ter no máximo 256 caracteres")]
+    public string? CaminhoImagemFundo { get; set; }
+
         [MaxLength(500, ErrorMessage = "Caminho do certificado deve ter no máximo 500 caracteres")]
         public string? CaminhoCertificadoDigital { get; set; }
 
@@ -117,6 +120,7 @@ namespace Backend.Api.DTOs
         public string? CaminhoSalvarXml { get; set; }
         public string? Rntrc { get; set; }
         public string? CaminhoLogotipo { get; set; }
+    public string? CaminhoImagemFundo { get; set; }
         public string? CaminhoCertificadoDigital { get; set; }
         public string? SenhaCertificadoDigital { get; set; }
         public int SerieInicial { get; set; }
@@ -146,6 +150,7 @@ namespace Backend.Api.DTOs
         public bool Ativo { get; set; }
         public string? CaminhoLogotipo { get; set; }
         public string? CaminhoCertificadoDigital { get; set; }
+    public string? CaminhoImagemFundo { get; set; }
     }
 
     public class EmitenteComCertificadoDto

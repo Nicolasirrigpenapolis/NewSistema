@@ -8,6 +8,8 @@ export interface EmpresaConfiguracao {
   caminhoBaseArmazenamento: string;
   caminhoLogotipo?: string | null;
   urlLogotipo?: string | null;
+  caminhoImagemFundo?: string | null;
+  urlImagemFundo?: string | null;
   pastaXml: string;
   pastaCertificados: string;
   pastaLogos: string;
@@ -30,11 +32,13 @@ class EmpresaService {
         return null;
       }
 
-      const urlCompleta = data.urlLogotipo ? `${API_ORIGIN}${data.urlLogotipo}` : null;
+      const urlLogotipoCompleta = data.urlLogotipo ? `${API_ORIGIN}${data.urlLogotipo}` : null;
+      const urlImagemFundoCompleta = data.urlImagemFundo ? `${API_ORIGIN}${data.urlImagemFundo}` : null;
 
       return {
         ...data,
-        urlLogotipo: urlCompleta,
+        urlLogotipo: urlLogotipoCompleta,
+        urlImagemFundo: urlImagemFundoCompleta,
       };
     } catch (error) {
       console.error('Erro ao carregar configurações da empresa:', error);
@@ -47,11 +51,13 @@ class EmpresaService {
     formData.append('arquivo', arquivo);
 
     const token = localStorage.getItem(TOKEN_KEY);
+    const tenantId = localStorage.getItem('empresaSelecionada');
 
     const response = await fetch(`${API_BASE_URL}/emitentes/logotipo`, {
       method: 'POST',
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
+        ...(tenantId && { 'X-Tenant-Id': tenantId }),
       },
       body: formData,
     });
@@ -71,6 +77,41 @@ class EmpresaService {
     return {
       sucesso: true,
       mensagem: resultado?.mensagem || 'Logotipo atualizado com sucesso.',
+      arquivo: resultado?.arquivo,
+    };
+  }
+
+  async enviarImagemFundo(arquivo: File): Promise<{ sucesso: boolean; mensagem: string; arquivo?: string }> {
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    const tenantId = localStorage.getItem('empresaSelecionada');
+
+    const response = await fetch(`${API_BASE_URL}/emitentes/imagem-fundo`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...(tenantId && { 'X-Tenant-Id': tenantId }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const texto = await response.text().catch(() => '');
+      throw new Error(texto || 'Falha ao enviar imagem de fundo');
+    }
+
+    let resultado: UploadLogotipoResposta | null = null;
+    try {
+      resultado = await response.json();
+    } catch {
+      resultado = null;
+    }
+
+    return {
+      sucesso: true,
+      mensagem: resultado?.mensagem || 'Imagem de fundo atualizada com sucesso.',
       arquivo: resultado?.arquivo,
     };
   }

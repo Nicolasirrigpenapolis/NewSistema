@@ -1,0 +1,32 @@
+{
+  "Empresas": [
+    {
+      "Id": "irrigacao",
+      "Nome": "Irrigação Penápolis",
+      "NomeExibicao": "Irrigação Penápolis",
+      "Logo": "/logos/irrigacao-logo.png",
+      "LogoLogin": "/logos/irrigacao-logo-login.png",
+      "FundoLogin": "/images/irrigacao-background.jpg",
+      "CorPrimaria": "#1E40AF",
+      "CorSecundaria": "#3B82F6",
+      "StringConexao": "Server=DESKTOP-CTAJU78\\SQLEXPRESS02;Database=SistemaIrrigacao;Integrated Security=true;TrustServerCertificate=true;MultipleActiveResultSets=true;",
+      "CertificadoCaminho": "certificados/irrigacao.pfx",
+      "CertificadoSenha": "",
+      "Ativo": true
+    },
+    {
+      "Id": "chinellato",
+      "Nome": "Chinellato Transportes",
+      "NomeExibicao": "Chinellato Transportes",
+      "Logo": "/logos/chinellato-logo.png",
+      "LogoLogin": "/logos/chinellato-logo-login.png",
+      "FundoLogin": "/images/chinellato-background.jpg",
+      "CorPrimaria": "#DC2626",
+      "CorSecundaria": "#EF4444",
+      "StringConexao": "Server=DESKTOP-CTAJU78\\SQLEXPRESS02;Database=SistemaChinellato;Integrated Security=true;TrustServerCertificate=true;MultipleActiveResultSets=true;",
+      "CertificadoCaminho": "certificados/chinellato.pfx",
+      "CertificadoSenha": "",
+      "Ativo": true
+    }
+  ]
+}

@@ -53,7 +53,8 @@ namespace Backend.Api.Controllers
                 Uf = entity.Uf,
                 Ativo = entity.Ativo,
                 CaminhoLogotipo = entity.CaminhoLogotipo,
-                CaminhoCertificadoDigital = entity.CaminhoCertificadoDigital
+                CaminhoCertificadoDigital = entity.CaminhoCertificadoDigital,
+                CaminhoImagemFundo = entity.CaminhoImagemFundo
             };
         }
 
@@ -82,6 +83,7 @@ namespace Backend.Api.Controllers
                 CaminhoSalvarXml = entity.CaminhoSalvarXml,
                 Rntrc = entity.Rntrc,
                 CaminhoLogotipo = entity.CaminhoLogotipo,
+                CaminhoImagemFundo = entity.CaminhoImagemFundo,
                 CaminhoCertificadoDigital = entity.CaminhoCertificadoDigital,
                 SenhaCertificadoDigital = entity.SenhaCertificadoDigital,
                 SerieInicial = entity.SerieInicial,
@@ -118,10 +120,11 @@ namespace Backend.Api.Controllers
                 Uf = dto.Uf.Trim(),
                 Telefone = dto.Telefone?.Trim(),
                 Email = dto.Email?.Trim(),
-                TipoEmitente = dto.TipoEmitente?.Trim(),
+                TipoEmitente = string.IsNullOrWhiteSpace(dto.TipoEmitente) ? "PrestadorServico" : dto.TipoEmitente.Trim(),
                 CaminhoSalvarXml = string.IsNullOrWhiteSpace(dto.CaminhoSalvarXml) ? null : dto.CaminhoSalvarXml.Trim(),
                 Rntrc = dto.Rntrc?.Trim(),
                 CaminhoLogotipo = dto.CaminhoLogotipo?.Trim(),
+                CaminhoImagemFundo = dto.CaminhoImagemFundo?.Trim(),
                 CaminhoCertificadoDigital = string.IsNullOrWhiteSpace(dto.CaminhoCertificadoDigital) ? null : dto.CaminhoCertificadoDigital.Trim(),
                 SenhaCertificadoDigital = dto.SenhaCertificadoDigital?.Trim(),
                 SerieInicial = dto.SerieInicial,
@@ -156,6 +159,7 @@ namespace Backend.Api.Controllers
             entity.CaminhoSalvarXml = string.IsNullOrWhiteSpace(dto.CaminhoSalvarXml) ? null : dto.CaminhoSalvarXml.Trim();
             entity.Rntrc = dto.Rntrc?.Trim();
             entity.CaminhoLogotipo = string.IsNullOrWhiteSpace(dto.CaminhoLogotipo) ? entity.CaminhoLogotipo : dto.CaminhoLogotipo.Trim();
+            entity.CaminhoImagemFundo = string.IsNullOrWhiteSpace(dto.CaminhoImagemFundo) ? entity.CaminhoImagemFundo : dto.CaminhoImagemFundo.Trim();
             entity.CaminhoCertificadoDigital = string.IsNullOrWhiteSpace(dto.CaminhoCertificadoDigital) ? entity.CaminhoCertificadoDigital : dto.CaminhoCertificadoDigital.Trim();
             entity.SenhaCertificadoDigital = dto.SenhaCertificadoDigital?.Trim();
             entity.SerieInicial = dto.SerieInicial;
@@ -243,7 +247,88 @@ namespace Backend.Api.Controllers
             }
 
             Response.Headers["Cache-Control"] = "public,max-age=300";
-            Response.Headers["ETag"] = $"\"{nomeArquivo}-{System.IO.File.GetLastWriteTimeUtc(caminhoFisico).Ticks}\"";
+            Response.Headers["ETag"] = $"\"{_contextoEmpresa.IdentificadorEmpresa}-{nomeArquivo}-{System.IO.File.GetLastWriteTimeUtc(caminhoFisico).Ticks}\"";
+
+            return PhysicalFile(caminhoFisico, contentType);
+        }
+
+        [HttpPost("imagem-fundo")]
+        [RequestSizeLimit(10 * 1024 * 1024)]
+        public async Task<IActionResult> EnviarImagemFundo([FromForm] IFormFile arquivo)
+        {
+            if (arquivo == null || arquivo.Length == 0)
+            {
+                return BadRequest(new { mensagem = "Selecione um arquivo de imagem válido." });
+            }
+
+            var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+            var formatosPermitidos = new[] { ".png", ".jpg", ".jpeg", ".svg", ".webp" };
+            if (!formatosPermitidos.Contains(extensao))
+            {
+                return BadRequest(new { mensagem = "Formato de imagem não suportado. Utilize PNG, JPG, SVG ou WEBP." });
+            }
+
+            const long tamanhoMaximo = 10 * 1024 * 1024;
+            if (arquivo.Length > tamanhoMaximo)
+            {
+                return BadRequest(new { mensagem = "A imagem de fundo deve ter no máximo 10 MB." });
+            }
+
+            var emitente = await _context.Emitentes.FirstOrDefaultAsync();
+            if (emitente == null)
+            {
+                return BadRequest(new { mensagem = "Configure o emitente antes de enviar a imagem de fundo." });
+            }
+
+            var pastaMidia = Path.Combine(_contextoEmpresa.Armazenamento.CaminhoBase, _contextoEmpresa.Armazenamento.PastaLogos);
+            Directory.CreateDirectory(pastaMidia);
+
+            var nomeArquivo = $"{_contextoEmpresa.IdentificadorEmpresa}-fundo{extensao}";
+            var caminhoFisico = Path.Combine(pastaMidia, nomeArquivo);
+
+            using (var stream = System.IO.File.Create(caminhoFisico))
+            {
+                await arquivo.CopyToAsync(stream);
+            }
+
+            emitente.CaminhoImagemFundo = nomeArquivo;
+            emitente.DataUltimaAlteracao = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            _cacheService?.RemoveByPrefix(GetCacheKeyPrefix());
+
+            return Ok(new { mensagem = "Imagem de fundo atualizada com sucesso.", arquivo = nomeArquivo });
+        }
+
+        [HttpGet("imagem-fundo")]
+        [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Client)]
+        public async Task<IActionResult> ObterImagemFundo()
+        {
+            var nomeArquivo = await _context.Emitentes
+                .AsNoTracking()
+                .Select(e => e.CaminhoImagemFundo)
+                .FirstOrDefaultAsync();
+
+            if (string.IsNullOrWhiteSpace(nomeArquivo))
+            {
+                return NotFound();
+            }
+
+            var pastaMidia = Path.Combine(_contextoEmpresa.Armazenamento.CaminhoBase, _contextoEmpresa.Armazenamento.PastaLogos);
+            var caminhoFisico = Path.Combine(pastaMidia, nomeArquivo);
+
+            if (!System.IO.File.Exists(caminhoFisico))
+            {
+                return NotFound();
+            }
+
+            if (!_contentTypeProvider.TryGetContentType(nomeArquivo, out var contentType))
+            {
+                contentType = "application/octet-stream";
+            }
+
+            Response.Headers["Cache-Control"] = "public,max-age=300";
+            Response.Headers["ETag"] = $"\"{_contextoEmpresa.IdentificadorEmpresa}-{nomeArquivo}-{System.IO.File.GetLastWriteTimeUtc(caminhoFisico).Ticks}\"";
 
             return PhysicalFile(caminhoFisico, contentType);
         }

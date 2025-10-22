@@ -253,11 +253,12 @@ namespace Backend.Api.Controllers
             }
 
             // Verificar se o período não conflita com outras viagens do mesmo veículo
+            // Permite que uma viagem comece no dia seguinte ao fim de outra (< em vez de <=)
             var conflictingViagem = await _context.Viagens
                 .AnyAsync(v => v.VeiculoId == dto.VeiculoId &&
-                              ((dto.DataInicio >= v.DataInicio && dto.DataInicio <= v.DataFim) ||
-                               (dto.DataFim >= v.DataInicio && dto.DataFim <= v.DataFim) ||
-                               (dto.DataInicio <= v.DataInicio && dto.DataFim >= v.DataFim)));
+                              ((dto.DataInicio >= v.DataInicio && dto.DataInicio < v.DataFim) ||
+                               (dto.DataFim > v.DataInicio && dto.DataFim <= v.DataFim) ||
+                               (dto.DataInicio < v.DataInicio && dto.DataFim > v.DataFim)));
 
             if (conflictingViagem)
             {
@@ -284,12 +285,13 @@ namespace Backend.Api.Controllers
                 return (false, "Data de fim deve ser posterior à data de início");
             }
 
-            // Verificar se o período não conflita com outras viagens do mesmo veículo (exceto a própria)
+            // Verificar se o período não conflita com outras viagens do mesmo veículo (exceto a atual)
+            // Permite que uma viagem comece no dia seguinte ao fim de outra (< em vez de <=)
             var conflictingViagem = await _context.Viagens
-                .AnyAsync(v => v.VeiculoId == dto.VeiculoId && v.Id != entity.Id &&
-                              ((dto.DataInicio >= v.DataInicio && dto.DataInicio <= v.DataFim) ||
-                               (dto.DataFim >= v.DataInicio && dto.DataFim <= v.DataFim) ||
-                               (dto.DataInicio <= v.DataInicio && dto.DataFim >= v.DataFim)));
+                .AnyAsync(v => v.Id != entity.Id && v.VeiculoId == dto.VeiculoId &&
+                              ((dto.DataInicio >= v.DataInicio && dto.DataInicio < v.DataFim) ||
+                               (dto.DataFim > v.DataInicio && dto.DataFim <= v.DataFim) ||
+                               (dto.DataInicio < v.DataInicio && dto.DataFim > v.DataFim)));
 
             if (conflictingViagem)
             {

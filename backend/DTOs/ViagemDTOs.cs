@@ -154,6 +154,8 @@ namespace Backend.Api.DTOs
         public int PageSize { get; set; } = 10;
         public string? SortBy { get; set; } = "DataInicio";
         public string? SortDirection { get; set; } = "desc";
+        public string? UsuarioSolicitante { get; set; }
+        public string? TituloRelatorio { get; set; }
     }
 
     public class RelatorioDespesasItemDto

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export interface ModalField {
   label: string;
   value: string | number | boolean | null | undefined;
@@ -59,7 +61,7 @@ export interface GenericViewModalProps<T = any> {
 export interface FormField {
   key: string;
   label: string;
-  type: 'text' | 'email' | 'password' | 'number' | 'select' | 'textarea' | 'checkbox' | 'toggle' | 'file' | 'folder' | 'cnpj' | 'cpf' | 'cep' | 'telefone' | 'date' | 'localidade';
+  type: 'text' | 'email' | 'password' | 'number' | 'select' | 'textarea' | 'checkbox' | 'toggle' | 'file' | 'folder' | 'cnpj' | 'cpf' | 'cep' | 'telefone' | 'date' | 'localidade' | 'custom';
   placeholder?: string;
   required?: boolean;
   options?: Array<{ value: string | number; label: string }>;
@@ -77,12 +79,23 @@ export interface FormField {
   dependsOn?: string;
   buttonLabel?: string;
   accept?: string;
+  hint?: string;
+  rows?: number;
+  render?: (context: {
+    value: any;
+    onChange: (value: any) => void;
+    data: any;
+    setFieldValue: (fieldKey: string, value: any) => void;
+    saving: boolean;
+    isEditing?: boolean;
+    sectionColor?: string;
+  }) => ReactNode;
 }
 
 export interface FormSection {
   title: string;
   subtitle?: string;
-  icon: string;
+  icon?: string;
   color: string;
   bgColor: string;
   fields: FormField[];

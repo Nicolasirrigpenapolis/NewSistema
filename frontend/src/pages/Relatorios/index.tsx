@@ -1,2 +1,2 @@
-export { RelatorioManutencao } from './RelatorioManutencao/RelatorioManutencao';
-export { RelatorioFinanceiroViagens } from './RelatorioDespesas/RelatorioDespesas';
+export { ListarManutencoesVeiculos } from './ListarManutencoesVeiculos/ListarManutencoesVeiculos';
+export { ListarViagens } from './ListarViagens/ListarViagens';

@@ -1,5 +1,7 @@
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useEffect } from 'react';
+import { NavigateFunction, useNavigate } from 'react-router-dom';
+import { usePermissionContext } from '../../contexts/PermissionContext';
+import { useToast } from '../../contexts/ToastContext';
 
 interface PermissionGuardProps {
   children: React.ReactNode;
@@ -16,46 +18,45 @@ export function PermissionGuard({
   permission,
   fallback 
 }: PermissionGuardProps) {
-  const { user } = useAuth();
+  const { loading, hasPermission, permissions } = usePermissionContext();
+  const { showToast } = useToast();
+  const navigate: NavigateFunction = useNavigate();
 
   const checkPermission = requiredPermission || permission;
 
-  // Se não há requisito, permite acesso
-  if (!checkPermission && !requiredRole) {
+  const shouldSkipPermissionCheck = !checkPermission && !requiredRole;
+  
+  // CORREÇÃO: Só negar acesso se as permissões foram carregadas E o usuário realmente não tem a permissão
+  // Se permissions.length === 0, significa que ainda não foram carregadas, então não podemos negar acesso
+  const permissionsLoaded = !loading && permissions.length > 0;
+  const isDenied = !shouldSkipPermissionCheck && Boolean(checkPermission) && permissionsLoaded && !hasPermission(checkPermission!);
+
+  useEffect(() => {
+    if (isDenied) {
+      console.log('[PermissionGuard] Acesso negado. Permissão necessária:', checkPermission);
+      console.log('[PermissionGuard] Permissões do usuário:', permissions.length);
+      showToast('Acesso negado', { title: 'Permissões', variant: 'error' });
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isDenied, navigate, showToast, checkPermission, permissions]);
+
+  if (shouldSkipPermissionCheck) {
     return <>{children}</>;
   }
 
-  // Verifica permissão se especificada (simplificado - sempre permite por ora)
-  if (checkPermission && false) {
-    if (fallback) {
-      return <>{fallback}</>;
-    }
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-foreground mb-2">Acesso Negado</h2>
-          <p className="text-muted-foreground mb-6">
-            Você não tem permissão para acessar esta página.
-          </p>
-          <button
-            onClick={() => window.history.back()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Voltar
-          </button>
+      <div className="flex min-h-[60vh] items-center justify-center bg-background">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          Verificando permissões...
         </div>
       </div>
     );
   }
 
-  // Verifica role se especificada
-  if (requiredRole && user?.cargoId && false) {
-    return <Navigate to="/dashboard" replace />;
+  if (isDenied) {
+    return <>{fallback ?? null}</>;
   }
 
   return <>{children}</>;

@@ -29,6 +29,9 @@ namespace Backend.Api.Controllers
                 VeiculoId = entity.VeiculoId,
                 VeiculoPlaca = entity.Veiculo?.Placa ?? "",
                 VeiculoMarca = entity.Veiculo?.Marca ?? "",
+                VeiculoDescricao = entity.Veiculo != null
+                    ? $"{entity.Veiculo.Placa ?? ""}{(!string.IsNullOrWhiteSpace(entity.Veiculo.Marca) ? $" - {entity.Veiculo.Marca}" : "")}"
+                    : "",
                 DataManutencao = entity.DataManutencao,
                 Descricao = entity.Descricao,
                 FornecedorId = entity.FornecedorId,
@@ -172,23 +175,42 @@ namespace Backend.Api.Controllers
         protected override async Task<(bool isValid, string errorMessage)> ValidateCreateAsync(ManutencaoVeiculoCreateDto dto)
         {
             // Verificar se veículo existe
-            var veiculoExists = await _context.Veiculos
-                .AnyAsync(v => v.Id == dto.VeiculoId);
-
-            if (!veiculoExists)
+            var veiculoExiste = await _context.Veiculos.AnyAsync(v => v.Id == dto.VeiculoId);
+            if (!veiculoExiste)
             {
-                return (false, "Veículo não encontrado");
+                _logger.LogWarning("Veículo com ID {VeiculoId} não existe no banco de dados", dto.VeiculoId);
+                return (false, $"Veículo com ID {dto.VeiculoId} não encontrado. Por favor, selecione um veículo válido.");
             }
 
-            // Verificar se fornecedor existe (se informado)
+            // Verificar se veículo está ativo
+            var veiculoAtivo = await _context.Veiculos
+                .AnyAsync(v => v.Id == dto.VeiculoId && v.Ativo);
+
+            if (!veiculoAtivo)
+            {
+                _logger.LogWarning("Veículo com ID {VeiculoId} existe mas está inativo", dto.VeiculoId);
+                return (false, "O veículo selecionado está inativo. Por favor, ative o veículo ou selecione outro.");
+            }
+
+            // Verificar se fornecedor existe e está ativo (se informado)
             if (dto.FornecedorId.HasValue)
             {
-                var fornecedorExists = await _context.Fornecedores
+                var fornecedorExiste = await _context.Fornecedores
                     .AnyAsync(f => f.Id == dto.FornecedorId.Value);
 
-                if (!fornecedorExists)
+                if (!fornecedorExiste)
                 {
-                    return (false, "Fornecedor não encontrado");
+                    _logger.LogWarning("Fornecedor com ID {FornecedorId} não existe no banco de dados", dto.FornecedorId.Value);
+                    return (false, $"Fornecedor com ID {dto.FornecedorId.Value} não encontrado. Por favor, selecione um fornecedor válido.");
+                }
+
+                var fornecedorAtivo = await _context.Fornecedores
+                    .AnyAsync(f => f.Id == dto.FornecedorId.Value && f.Ativo);
+
+                if (!fornecedorAtivo)
+                {
+                    _logger.LogWarning("Fornecedor com ID {FornecedorId} existe mas está inativo", dto.FornecedorId.Value);
+                    return (false, "O fornecedor selecionado está inativo. Por favor, ative o fornecedor ou selecione outro.");
                 }
             }
 

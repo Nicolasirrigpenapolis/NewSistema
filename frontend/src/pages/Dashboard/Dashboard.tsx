@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { entitiesService } from '../../services/entitiesService';
 import { manutencoesService, ManutencaoListItem } from '../../services/manutencoesService';
-import { viagensService, Viagem } from '../../services/viagensService';
+import { viagensService, Viagem, ViagensPagedResponse } from '../../services/viagensService';
 import { fornecedoresService } from '../../services/fornecedoresService';
 import {
   Card,
@@ -17,13 +17,10 @@ import {
   Users,
   ClipboardList,
   Wrench,
-  Calendar,
-  Building2,
   Briefcase,
   Zap,
   BarChart3,
-  Navigation2,
-  LineChart
+  Navigation2
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -40,15 +37,6 @@ interface DashboardStats {
   totalEmitentes: number;
   emitentesAtivos: number;
   totalFornecedores: number;
-}
-
-interface AtividadeRecente {
-  id: string;
-  tipo: 'Viagem' | 'Manutenção';
-  titulo: string;
-  descricao?: string;
-  dataReferencia: string;
-  status?: string;
 }
 
 const initialStats: DashboardStats = {
@@ -97,7 +85,7 @@ export function Dashboard(): JSX.Element {
         entitiesService.obterCondutores(),
         entitiesService.obterContratantes(),
         entitiesService.obterSeguradoras(),
-        fornecedoresService.getFornecedores({ pageSize: 1000 }),
+        fornecedoresService.getFornecedores({ pageSize: 100 }),
         manutencoesService.getManutencoes({ pageSize: 100, page: 1, sortBy: 'dataManutencao', sortDirection: 'desc' }),
         viagensService.listar()
       ]);
@@ -133,11 +121,11 @@ export function Dashboard(): JSX.Element {
           []
         : [];
 
-      const viagensLista =
+      const viagensLista: Viagem[] =
         viagensRes.status === 'fulfilled' &&
         viagensRes.value.success &&
         viagensRes.value.data
-          ? viagensRes.value.data
+          ? viagensRes.value.data.items
           : [];
 
       setManutencoes(manutencoesLista);
@@ -205,33 +193,6 @@ export function Dashboard(): JSX.Element {
     });
   };
 
-  const veiculosAtivosPercent = useMemo(() => {
-    if (!stats.totalVeiculos) return 0;
-    return Math.round((stats.veiculosAtivos / stats.totalVeiculos) * 100);
-  }, [stats.totalVeiculos, stats.veiculosAtivos]);
-
-  const condutoresAtivosPercent = useMemo(() => {
-    if (!stats.totalCondutores) return 0;
-    return Math.round((stats.condutoresAtivos / stats.totalCondutores) * 100);
-  }, [stats.totalCondutores, stats.condutoresAtivos]);
-
-  const proximasManutencoes = useMemo(() => {
-    const agora = new Date();
-    return manutencoes
-      .filter((manutencao) => {
-        if (!manutencao?.dataManutencao) return false;
-        return new Date(manutencao.dataManutencao) >= agora;
-      })
-      .sort((a, b) => new Date(a.dataManutencao).getTime() - new Date(b.dataManutencao).getTime())
-      .slice(0, 5);
-  }, [manutencoes]);
-
-  const viagensRecentes = useMemo(() => {
-    return [...viagens]
-      .sort((a, b) => new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime())
-      .slice(0, 5);
-  }, [viagens]);
-
   const viagensEmAndamentoLista = useMemo(() => {
     const agora = new Date();
     return viagens
@@ -243,39 +204,6 @@ export function Dashboard(): JSX.Element {
       .sort((a, b) => new Date(a.dataInicio).getTime() - new Date(b.dataInicio).getTime())
       .slice(0, 5);
   }, [viagens]);
-
-  const atividadesRecentes: AtividadeRecente[] = useMemo(() => {
-    const atividades: AtividadeRecente[] = [
-      ...viagensRecentes.map((viagem) => ({
-        id: `viagem-${viagem.id}`,
-        tipo: 'Viagem' as const,
-        titulo: viagem.veiculoPlaca
-          ? `Viagem com ${viagem.veiculoPlaca}`
-          : `Viagem #${viagem.id ?? '-'}`,
-        descricao: viagem.motoristaNome || viagem.condutorNome || 'Sem motorista definido',
-        dataReferencia: viagem.dataInicio,
-        status: viagem.dataFim ? 'Finalizada' : 'Em andamento'
-      })),
-      ...manutencoes
-        .slice(0, 10)
-        .map((manutencao) => ({
-          id: `manutencao-${manutencao.id}`,
-          tipo: 'Manutenção' as const,
-          titulo: manutencao.veiculoPlaca
-            ? `Manutenção em ${manutencao.veiculoPlaca}`
-            : `Manutenção #${manutencao.id}`,
-          descricao: manutencao.descricao,
-          dataReferencia: manutencao.dataManutencao,
-          status: new Date(manutencao.dataManutencao) >= new Date()
-            ? 'Programada'
-            : 'Concluída'
-        }))
-    ];
-
-    return atividades
-      .sort((a, b) => new Date(b.dataReferencia).getTime() - new Date(a.dataReferencia).getTime())
-      .slice(0, 8);
-  }, [viagensRecentes, manutencoes]);
 
   if (carregando) {
     return (
@@ -289,244 +217,153 @@ export function Dashboard(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen p-8 space-y-8">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">Painel de Gestão</h1>
-          <p className="text-muted-foreground mt-2">
-            Acompanhe rapidamente a saúde operacional, financeira e de cadastros da empresa.
-          </p>
-        </div>
-        <button
-          className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-          onClick={() => handleNavigate('/viagens/nova')}
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-4xl font-bold tracking-tight">Painel de Gestão</h1>
+        <p className="text-muted-foreground mt-2">
+          Acompanhe rapidamente a saúde operacional, financeira e de cadastros da empresa.
+        </p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {/* Card Frota */}
+        <Card
+          className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2"
+          onClick={() => handleNavigate('/veiculos')}
         >
-          <Zap className="w-4 h-4" />
-          Criar planejamento
-        </button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="hover:shadow-lg transition-all hover:scale-[1.01] border-l-4 border-l-orange-500 cursor-pointer" onClick={() => handleNavigate('/veiculos')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Frota</CardTitle>
-            <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-950 flex items-center justify-center">
-              <Truck className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalVeiculos}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.veiculosAtivos} em operação ({veiculosAtivosPercent}% ativos)
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all hover:scale-[1.01] border-l-4 border-l-blue-500 cursor-pointer" onClick={() => handleNavigate('/condutores')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Motoristas</CardTitle>
-            <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCondutores}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.condutoresAtivos} ativos ({condutoresAtivosPercent}%)
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all hover:scale-[1.01] border-l-4 border-l-emerald-500 cursor-pointer" onClick={() => handleNavigate('/viagens')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Operações</CardTitle>
-            <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center">
-              <Navigation2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalViagens}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.viagensEmAndamento} viagens em andamento
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all hover:scale-[1.01] border-l-4 border-l-purple-500 cursor-pointer" onClick={() => handleNavigate('/manutencoes')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Manutenções</CardTitle>
-            <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-950 flex items-center justify-center">
-              <Wrench className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalManutencoes}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.manutencoesAgendadas} agendadas nos próximos dias
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <LineChart className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Atividades recentes</CardTitle>
-                <CardDescription>Monitoramento de viagens e manutenções registradas.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {atividadesRecentes.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
-                Nenhuma atividade registrada recentemente.
-              </div>
-            ) : (
-              atividadesRecentes.map((atividade) => (
-                <div
-                  key={atividade.id}
-                  className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      {atividade.tipo === 'Viagem' ? (
-                        <TrendingUp className="w-5 h-5 text-primary" />
-                      ) : (
-                        <Wrench className="w-5 h-5 text-primary" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{atividade.titulo}</p>
-                      {atividade.descricao && (
-                        <p className="text-xs text-muted-foreground">{atividade.descricao}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 md:text-right">
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(atividade.dataReferencia)}
-                    </span>
-                    {atividade.status && (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        {atividade.status}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Indicadores de operação</CardTitle>
-                <CardDescription>Nível de utilização dos recursos principais.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span>Frota ativa</span>
-                <span className="font-semibold">{veiculosAtivosPercent}%</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted">
-                <div
-                  className="h-2 rounded-full bg-orange-500 transition-all"
-                  style={{ width: `${veiculosAtivosPercent}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.veiculosAtivos} de {stats.totalVeiculos} veículos disponíveis
-              </p>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span>Equipe em atividade</span>
-                <span className="font-semibold">{condutoresAtivosPercent}%</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted">
-                <div
-                  className="h-2 rounded-full bg-blue-500 transition-all"
-                  style={{ width: `${condutoresAtivosPercent}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.condutoresAtivos} de {stats.totalCondutores} motoristas disponíveis
-              </p>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span>Agenda de manutenção</span>
-                <span className="font-semibold">
-                  {stats.totalManutencoes ? Math.round((stats.manutencoesAgendadas / Math.max(stats.totalManutencoes, 1)) * 100) : 0}%
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-muted">
-                <div
-                  className="h-2 rounded-full bg-purple-500 transition-all"
-                  style={{
-                    width: stats.totalManutencoes
-                      ? `${Math.round((stats.manutencoesAgendadas / Math.max(stats.totalManutencoes, 1)) * 100)}%`
-                      : '0%'
-                  }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.manutencoesAgendadas} manutenções programadas
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Agenda de manutenção</CardTitle>
-                <CardDescription>Próximas inspeções e serviços programados.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {proximasManutencoes.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
-                Nenhuma manutenção agendada.
-              </div>
-            ) : (
-              proximasManutencoes.map((manutencao) => (
-                <div
-                  key={manutencao.id}
-                  className="rounded-lg border p-3 hover:bg-accent/50 transition-colors space-y-1"
-                >
-                  <div className="flex items-center justify-between text-sm font-semibold">
-                    <span>{manutencao.veiculoPlaca || `Veículo #${manutencao.veiculoId}`}</span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
-                      {formatDate(manutencao.dataManutencao)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{manutencao.descricao}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Valor previsto: {formatCurrency(manutencao.valorTotal)}
+          <CardContent className="pt-8 px-8 pb-6">
+            <div className="flex flex-col gap-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 mb-4">
+                    Frota Total
                   </p>
+                  <h3 className="text-4xl font-bold tracking-tight">
+                    {stats.totalVeiculos}
+                  </h3>
                 </div>
-              ))
-            )}
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/20 flex items-center justify-center shadow-sm">
+                  <Truck className="h-7 w-7 text-blue-600 dark:text-blue-400 fill-blue-600 dark:fill-blue-400" />
+                </div>
+              </div>
+              <div className="pt-5 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Em operação
+                  </span>
+                  <span className="text-sm font-bold">
+                    {stats.veiculosAtivos}
+                  </span>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
+        {/* Card Motoristas */}
+        <Card
+          className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2"
+          onClick={() => handleNavigate('/condutores')}
+        >
+          <CardContent className="pt-8 px-8 pb-6">
+            <div className="flex flex-col gap-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 mb-4">
+                    Motoristas
+                  </p>
+                  <h3 className="text-4xl font-bold tracking-tight">
+                    {stats.totalCondutores}
+                  </h3>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/20 flex items-center justify-center shadow-sm">
+                  <Users className="h-7 w-7 text-green-600 dark:text-green-400 fill-green-600 dark:fill-green-400" />
+                </div>
+              </div>
+              <div className="pt-5 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Ativos agora
+                  </span>
+                  <span className="text-sm font-bold">
+                    {stats.condutoresAtivos}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card Operações */}
+        <Card
+          className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2"
+          onClick={() => handleNavigate('/viagens')}
+        >
+          <CardContent className="pt-8 px-8 pb-6">
+            <div className="flex flex-col gap-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 mb-4">
+                    Operações
+                  </p>
+                  <h3 className="text-4xl font-bold tracking-tight">
+                    {stats.totalViagens}
+                  </h3>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/20 flex items-center justify-center shadow-sm">
+                  <Navigation2 className="h-7 w-7 text-purple-600 dark:text-purple-400 fill-purple-600 dark:fill-purple-400" />
+                </div>
+              </div>
+              <div className="pt-5 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Em andamento
+                  </span>
+                  <span className="text-sm font-bold">
+                    {stats.viagensEmAndamento}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card Manutenções */}
+        <Card
+          className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] border-2"
+          onClick={() => handleNavigate('/manutencoes')}
+        >
+          <CardContent className="pt-8 px-8 pb-6">
+            <div className="flex flex-col gap-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 mb-4">
+                    Manutenções
+                  </p>
+                  <h3 className="text-4xl font-bold tracking-tight">
+                    {stats.totalManutencoes}
+                  </h3>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-600/20 flex items-center justify-center shadow-sm">
+                  <Wrench className="h-7 w-7 text-orange-600 dark:text-orange-400 fill-orange-600 dark:fill-orange-400" />
+                </div>
+              </div>
+              <div className="pt-5 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Agendadas
+                  </span>
+                  <span className="text-sm font-bold">
+                    {stats.manutencoesAgendadas}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -627,7 +464,7 @@ export function Dashboard(): JSX.Element {
 
             <button
               className="w-full flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors group"
-              onClick={() => handleNavigate('/relatorios/manutencao')}
+              onClick={() => handleNavigate('/relatorios/manutencoes-veiculos')}
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
@@ -640,64 +477,6 @@ export function Dashboard(): JSX.Element {
               </div>
               <span className="text-muted-foreground group-hover:text-primary transition-colors">→</span>
             </button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Cadastros estratégicos</CardTitle>
-                <CardDescription>Visão dos principais parceiros e empresas envolvidas.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Empresas emitentes</span>
-              <span className="font-semibold">
-                {stats.totalEmitentes} ({stats.emitentesAtivos} ativas)
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Clientes / contratantes</span>
-              <span className="font-semibold">{stats.totalContratantes}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Seguradoras</span>
-              <span className="font-semibold">{stats.totalSeguradoras}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Fornecedores</span>
-              <span className="font-semibold">{stats.totalFornecedores}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle>Planejamento integrado</CardTitle>
-                <CardDescription>Centralize todas as frentes da operação em um só lugar.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              O dashboard reúne as principais frentes do negócio: frota, pessoas, viagens, manutenção,
-              cadastros e parceiros. Use os atalhos e indicadores para antecipar demandas e tomar decisões rápidas.
-            </p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li>Monitoramento operacional em tempo real</li>
-              <li>Agenda única para serviços e deslocamentos</li>
-              <li>Visão consolidada de parceiros e fornecedores</li>
-              <li>Integração com relatórios financeiros e de compliance</li>
-            </ul>
           </CardContent>
         </Card>
       </div>

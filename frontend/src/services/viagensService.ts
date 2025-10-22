@@ -63,13 +63,24 @@ export const TiposDespesa = {
 
 export const TodosTiposDespesa = Object.values(TiposDespesa);
 
+// Interface para resposta paginada
+export interface ViagensPagedResponse {
+  items: Viagem[];
+  totalItems: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 class ViagensService {
-  private readonly baseUrl = '/viagens';
+  private readonly baseUrl = '/Viagem';
 
   // Listar todas as viagens
-  async listar(): Promise<ApiResponse<Viagem[]>> {
+  async listar(): Promise<ApiResponse<ViagensPagedResponse>> {
     try {
-      const response = await api.get<Viagem[]>(this.baseUrl);
+      const response = await api.get<ViagensPagedResponse>(this.baseUrl);
       return {
         success: true,
         data: response.data,
@@ -122,7 +133,7 @@ class ViagensService {
       console.error('Erro ao criar viagem:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Erro ao criar viagem',
+        message: error.response?.data?.message || error.message || 'Erro ao criar viagem',
         data: null,
         timestamp: new Date().toISOString()
       };
@@ -143,7 +154,7 @@ class ViagensService {
       console.error('Erro ao atualizar viagem:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Erro ao atualizar viagem',
+        message: error.response?.data?.message || error.message || 'Erro ao atualizar viagem',
         data: null,
         timestamp: new Date().toISOString()
       };
@@ -164,7 +175,7 @@ class ViagensService {
       console.error('Erro ao excluir viagem:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Erro ao excluir viagem',
+        message: error.response?.data?.message || error.message || 'Erro ao excluir viagem',
         data: null,
         timestamp: new Date().toISOString()
       };

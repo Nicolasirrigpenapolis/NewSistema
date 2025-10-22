@@ -17,7 +17,7 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
 {
     private readonly ILogger<AcbrLibMDFeProvider> _logger;
     private readonly IConfiguration _configuration;
-    private readonly SistemaContext _context;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly AcbrConfigManager _configManager;
     private bool _initialized = false;
     private bool _disposed = false;
@@ -30,11 +30,11 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
     public AcbrLibMDFeProvider(
         ILogger<AcbrLibMDFeProvider> logger,
         IConfiguration configuration,
-        SistemaContext context)
+        IServiceScopeFactory serviceScopeFactory)
     {
         _logger = logger;
         _configuration = configuration;
-        _context = context;
+        _serviceScopeFactory = serviceScopeFactory;
         _configManager = new AcbrConfigManager(configuration);
 
         Inicializar();
@@ -68,6 +68,16 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
         }
 
         throw new FileNotFoundException($"Não foi possível localizar a biblioteca nativa {dllName}. Copie o arquivo para {nativeDir} ou configure o PATH.");
+    }
+
+    /// <summary>
+    /// Cria um scope temporário para obter o SistemaContext
+    /// Necessário porque o provider é Singleton mas o Context é Scoped
+    /// </summary>
+    private SistemaContext CreateContext()
+    {
+        var scope = _serviceScopeFactory.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<SistemaContext>();
     }
 
     #region Inicialização e Controle
@@ -219,19 +229,23 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
             }
 
             // 7. Atualizar banco de dados
-            var mdfe = await _context.MDFes.FindAsync(mdfeId);
-            if (mdfe != null)
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
-                mdfe.Protocolo = transmissao.Protocolo;
-                mdfe.NumeroRecibo = transmissao.NumeroRecibo;
-                mdfe.XmlAutorizado = transmissao.XmlAutorizado;
-                mdfe.DataTransmissao = DateTime.Now;
-                mdfe.DataAutorizacao = DateTime.TryParse(transmissao.DataRecebimento, out var dt) ? dt : null;
-                mdfe.Transmitido = true;
-                mdfe.Autorizado = true;
-                mdfe.RegistrarStatus("AUTORIZADO", $"Protocolo: {transmissao.Protocolo}");
+                var context = scope.ServiceProvider.GetRequiredService<SistemaContext>();
+                var mdfe = await context.MDFes.FindAsync(mdfeId);
+                if (mdfe != null)
+                {
+                    mdfe.Protocolo = transmissao.Protocolo;
+                    mdfe.NumeroRecibo = transmissao.NumeroRecibo;
+                    mdfe.XmlAutorizado = transmissao.XmlAutorizado;
+                    mdfe.DataTransmissao = DateTime.Now;
+                    mdfe.DataAutorizacao = DateTime.TryParse(transmissao.DataRecebimento, out var dt) ? dt : null;
+                    mdfe.Transmitido = true;
+                    mdfe.Autorizado = true;
+                    mdfe.RegistrarStatus("AUTORIZADO", $"Protocolo: {transmissao.Protocolo}");
 
-                await _context.SaveChangesAsync();
+                    await context.SaveChangesAsync();
+                }
             }
 
             return ProviderResult<object>.Ok(transmissao);
@@ -396,47 +410,51 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
             _logger.LogInformation("[AcbrLibMDFe] Cancelando MDFe: {Chave}", chave);
 
             // Buscar MDFe no banco para obter dados
-            var mdfe = await _context.MDFes.FirstOrDefaultAsync(m => m.ChaveAcesso == chave);
-            if (mdfe == null)
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
-                return ProviderResult<object>.Falha(ProviderErrorCode.NaoEncontrado, "MDFe não encontrado");
+                var context = scope.ServiceProvider.GetRequiredService<SistemaContext>();
+                var mdfe = await context.MDFes.FirstOrDefaultAsync(m => m.ChaveAcesso == chave);
+                if (mdfe == null)
+                {
+                    return ProviderResult<object>.Falha(ProviderErrorCode.NaoEncontrado, "MDFe não encontrado");
+                }
+
+                var resposta = AcbrLibMDFeNative.CreateResponseBuffer();
+                int tamanho = resposta.Capacity;
+
+                var ret = AcbrLibMDFeNative.MDFE_Cancelar(
+                    chave,
+                    justificativa,
+                    mdfe.EmitenteCnpj,
+                    1, // Lote
+                    resposta,
+                    ref tamanho);
+
+                if (!AcbrLibMDFeNative.IsSuccess(ret))
+                {
+                    var erro = ObterUltimoErro();
+                    return ProviderResult<object>.Falha(ProviderErrorCode.ErroEvento,
+                        $"Erro ao cancelar: {erro}");
+                }
+
+                var evento = AcbrIniResponseParser.ParseEvento(resposta.ToString());
+
+                if (evento.Sucesso)
+                {
+                    mdfe.Cancelado = true;
+                    mdfe.DataCancelamento = DateTime.Now;
+                    mdfe.RegistrarStatus("CANCELADO", $"Justificativa: {justificativa}");
+                    await context.SaveChangesAsync();
+                }
+
+                return ProviderResult<object>.Ok(new
+                {
+                    evento.Sucesso,
+                    evento.CodigoStatus,
+                    evento.MotivoStatus,
+                    evento.ProtocoloEvento
+                });
             }
-
-            var resposta = AcbrLibMDFeNative.CreateResponseBuffer();
-            int tamanho = resposta.Capacity;
-
-            var ret = AcbrLibMDFeNative.MDFE_Cancelar(
-                chave,
-                justificativa,
-                mdfe.EmitenteCnpj,
-                1, // Lote
-                resposta,
-                ref tamanho);
-
-            if (!AcbrLibMDFeNative.IsSuccess(ret))
-            {
-                var erro = ObterUltimoErro();
-                return ProviderResult<object>.Falha(ProviderErrorCode.ErroEvento,
-                    $"Erro ao cancelar: {erro}");
-            }
-
-            var evento = AcbrIniResponseParser.ParseEvento(resposta.ToString());
-
-            if (evento.Sucesso)
-            {
-                mdfe.Cancelado = true;
-                mdfe.DataCancelamento = DateTime.Now;
-                mdfe.RegistrarStatus("CANCELADO", $"Justificativa: {justificativa}");
-                await _context.SaveChangesAsync();
-            }
-
-            return ProviderResult<object>.Ok(new
-            {
-                evento.Sucesso,
-                evento.CodigoStatus,
-                evento.MotivoStatus,
-                evento.ProtocoloEvento
-            });
         }
         catch (Exception ex)
         {
@@ -453,55 +471,60 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
 
             _logger.LogInformation("[AcbrLibMDFe] Encerrando MDFe: {Chave}", chave);
 
-            // Buscar código IBGE do município
-            var municipio = await _context.Municipios
-                .FirstOrDefaultAsync(m => m.Nome == municipioEncerramento);
-
-            if (municipio == null)
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
-                return ProviderResult<object>.Falha(ProviderErrorCode.ErroValidacao,
-                    "Município de encerramento não encontrado");
-            }
+                var context = scope.ServiceProvider.GetRequiredService<SistemaContext>();
+                
+                // Buscar código IBGE do município
+                var municipio = await context.Municipios
+                    .FirstOrDefaultAsync(m => m.Nome == municipioEncerramento);
 
-            var resposta = AcbrLibMDFeNative.CreateResponseBuffer();
-            int tamanho = resposta.Capacity;
-
-            var ret = AcbrLibMDFeNative.MDFE_EncerrarMDFe(
-                chave,
-                dataEncerramento.ToString("yyyy-MM-ddTHH:mm:ss"),
-                municipio.Uf,
-                municipio.Codigo.ToString(),
-                resposta,
-                ref tamanho);
-
-            if (!AcbrLibMDFeNative.IsSuccess(ret))
-            {
-                var erro = ObterUltimoErro();
-                return ProviderResult<object>.Falha(ProviderErrorCode.ErroEvento,
-                    $"Erro ao encerrar: {erro}");
-            }
-
-            var evento = AcbrIniResponseParser.ParseEvento(resposta.ToString());
-
-            if (evento.Sucesso)
-            {
-                var mdfe = await _context.MDFes.FirstOrDefaultAsync(m => m.ChaveAcesso == chave);
-                if (mdfe != null)
+                if (municipio == null)
                 {
-                    mdfe.Encerrado = true;
-                    mdfe.DataEncerramento = dataEncerramento;
-                    mdfe.RegistrarStatus("ENCERRADO", $"Município: {municipioEncerramento}");
-                    await _context.SaveChangesAsync();
+                    return ProviderResult<object>.Falha(ProviderErrorCode.ErroValidacao,
+                        "Município de encerramento não encontrado");
                 }
-            }
 
-            return ProviderResult<object>.Ok(new
-            {
-                evento.Sucesso,
-                evento.CodigoStatus,
-                evento.MotivoStatus,
-                evento.ProtocoloEvento
-            });
+                var resposta = AcbrLibMDFeNative.CreateResponseBuffer();
+                int tamanho = resposta.Capacity;
+
+                var ret = AcbrLibMDFeNative.MDFE_EncerrarMDFe(
+                    chave,
+                    dataEncerramento.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    municipio.Uf,
+                    municipio.Codigo.ToString(),
+                    resposta,
+                    ref tamanho);
+
+                if (!AcbrLibMDFeNative.IsSuccess(ret))
+                {
+                    var erro = ObterUltimoErro();
+                    return ProviderResult<object>.Falha(ProviderErrorCode.ErroEvento,
+                        $"Erro ao encerrar: {erro}");
+                }
+
+                var evento = AcbrIniResponseParser.ParseEvento(resposta.ToString());
+
+                if (evento.Sucesso)
+                {
+                    var mdfe = await context.MDFes.FirstOrDefaultAsync(m => m.ChaveAcesso == chave);
+                    if (mdfe != null)
+                    {
+                        mdfe.Encerrado = true;
+                        mdfe.DataEncerramento = dataEncerramento;
+                        mdfe.RegistrarStatus("ENCERRADO", $"Município: {municipioEncerramento}");
+                        await context.SaveChangesAsync();
+                    }
+                }
+
+                return ProviderResult<object>.Ok(new
+                {
+                    evento.Sucesso,
+                    evento.CodigoStatus,
+                    evento.MotivoStatus,
+                    evento.ProtocoloEvento
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -567,14 +590,18 @@ public class AcbrLibMDFeProvider : IMDFeProvider, IDisposable
     {
         try
         {
-            var mdfe = await _context.MDFes.FindAsync(mdfeId);
-            if (mdfe?.XmlAutorizado != null)
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
-                return ProviderResult<string>.Ok(mdfe.XmlAutorizado);
-            }
+                var context = scope.ServiceProvider.GetRequiredService<SistemaContext>();
+                var mdfe = await context.MDFes.FindAsync(mdfeId);
+                if (mdfe?.XmlAutorizado != null)
+                {
+                    return ProviderResult<string>.Ok(mdfe.XmlAutorizado);
+                }
 
-            return ProviderResult<string>.Falha(ProviderErrorCode.NaoEncontrado,
-                "XML não disponível. Transmita o MDFe primeiro.");
+                return ProviderResult<string>.Falha(ProviderErrorCode.NaoEncontrado,
+                    "XML não disponível. Transmita o MDFe primeiro.");
+            }
         }
         catch (Exception ex)
         {

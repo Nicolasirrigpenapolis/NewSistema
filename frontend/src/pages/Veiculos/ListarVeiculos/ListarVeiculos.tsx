@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { entitiesService } from '../../../services/entitiesService';
+import { buildCommonHeaders } from '../../../services/api';
 import Icon from '../../../components/UI/Icon';
+import { Icon as ThemedIcon } from '../../../ui';
 import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
 import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
 import { veiculoConfig } from '../../../components/Veiculos/VeiculoConfig';
@@ -108,7 +110,9 @@ export function ListarVeiculos() {
         params.append('Uf', uf);
       }
 
-      const response = await fetch(`${API_BASE_URL}/veiculos?${params}`);
+      const response = await fetch(`${API_BASE_URL}/veiculos?${params}`, {
+        headers: buildCommonHeaders()
+      });
 
       if (!response.ok) {
         throw new Error('Erro ao carregar veículos');
@@ -220,12 +224,16 @@ export function ListarVeiculos() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="w-full px-2 py-4">
+      <div className="w-full py-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Icon name="truck" className="text-white" size="xl" />
+            <div className="relative w-14 h-14 rounded-xl shadow-lg shadow-purple-500/30 overflow-hidden">
+              <span className="absolute inset-0 bg-gradient-to-br from-purple-600 via-purple-500 to-blue-600 dark:from-purple-500 dark:via-purple-400 dark:to-blue-500" aria-hidden="true" />
+              <span className="absolute inset-0 opacity-40 blur-lg bg-purple-400" aria-hidden="true" />
+              <div className="relative h-full w-full flex items-center justify-center">
+                <ThemedIcon name="truck" className="text-white text-2xl" />
+              </div>
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-1">Veículos</h1>
@@ -327,7 +335,7 @@ export function ListarVeiculos() {
             <div>
               <button
                 onClick={aplicarFiltros}
-                className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
               >
                 <Icon name="search" />
                 Filtrar
@@ -416,21 +424,21 @@ export function ListarVeiculos() {
                   </div>
                   <div className="flex items-center justify-center gap-2">
                     <button
-                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200"
+                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => abrirModalVisualizacao(veiculo)}
                       title="Visualizar"
                     >
                       <Icon name="eye" />
                     </button>
                     <button
-                      className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
+                      className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => abrirEdicao(veiculo)}
                       title="Editar"
                     >
                       <Icon name="edit" />
                     </button>
                     <button
-                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200"
+                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => abrirModalExclusao(veiculo)}
                       title="Excluir"
                     >

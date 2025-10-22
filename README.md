@@ -71,6 +71,23 @@ cd frontend
 3. Defina variáveis sensíveis (JWT, conexão) via secret user-secrets ou variáveis de ambiente
 4. Execute as migrações (se necessário) `dotnet ef database update` dentro de `backend/`
 
+### 🔐 Usuário Programador (Acesso Imediato)
+
+O sistema cria automaticamente um **usuário com acesso total** na primeira execução:
+
+```
+Usuário: programador
+Senha: conectairrig@
+```
+
+**Características:**
+- ✅ Criado automaticamente na inicialização
+- ✅ Acesso a todas as 37 permissões do sistema
+- ✅ Não requer scripts SQL manuais
+- ✅ Idempotente - pode reiniciar quantas vezes quiser
+
+📖 **Documentação completa**: [docs/USUARIO_PROGRAMADOR.md](docs/USUARIO_PROGRAMADOR.md)
+
 ## Funcionalidades Implementadas (Resumo)
 
 - Gestão de Emitentes, Veículos, Condutores, Contratantes, Seguradoras, Municípios

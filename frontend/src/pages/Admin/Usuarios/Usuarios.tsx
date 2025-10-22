@@ -5,7 +5,8 @@ import { cargosService, Cargo } from '../../../services/cargosService';
 import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
 import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
 import { createUsuarioConfigWithCargos } from '../../../components/Usuarios/UsuarioConfigWithCargos';
-import { Icon } from '../../../ui';
+import Icon from '../../../components/UI/Icon';
+import { Icon as ThemedIcon } from '../../../ui';
 
 interface User {
   id: number;
@@ -107,10 +108,15 @@ export function Usuarios() {
 
     try {
       setDeleting(true);
-      // TODO: Implementar API de exclusão quando estiver disponível
-      console.log('Excluindo usuário:', selectedUser.id);
-      setUsers(prev => prev.filter(user => user.id !== selectedUser.id));
-      fecharModalExclusao();
+      const result = await authService.deleteUser(selectedUser.id);
+      
+      if (result.sucesso) {
+        setUsers(prev => prev.filter(user => user.id !== selectedUser.id));
+        fecharModalExclusao();
+      } else {
+        console.error('Erro ao excluir usuário:', result.mensagem);
+        throw new Error(result.mensagem || 'Erro ao excluir usuário');
+      }
     } catch (error) {
       console.error('Erro ao excluir usuário:', error);
       throw error;
@@ -143,30 +149,42 @@ export function Usuarios() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-background">
+        <div className="w-full px-6 py-8">
+          <div className="flex items-center justify-center py-16">
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-muted-foreground">Carregando usuários...</span>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="w-full px-2 py-4">
+      <div className="w-full py-4">
+        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-green-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-              <i className="fas fa-users text-white text-xl"></i>
+            <div className="relative w-14 h-14 rounded-xl shadow-lg shadow-indigo-600/30 overflow-hidden">
+              <span className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-indigo-600 to-indigo-500 dark:from-indigo-600 dark:via-indigo-500 dark:to-indigo-400" aria-hidden="true" />
+              <span className="absolute inset-0 opacity-40 blur-lg bg-indigo-600" aria-hidden="true" />
+              <div className="relative h-full w-full flex items-center justify-center">
+                <ThemedIcon name="users" className="!text-white text-2xl" />
+              </div>
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-1">Usuários</h1>
-              <p className="text-muted-foreground text-lg">Gerencie os usuários com acesso ao sistema MDFe</p>
+              <p className="text-muted-foreground text-lg">Gerencie os usuários cadastrados no sistema</p>
             </div>
           </div>
           <button
             onClick={abrirNovo}
-            className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="px-6 py-3 bg-gradient-to-r from-indigo-700 to-indigo-600 hover:from-indigo-800 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
-            <i className="fas fa-plus text-lg"></i>
+            <Icon name="plus" size="lg" />
             <span>Novo Usuário</span>
           </button>
         </div>
@@ -182,7 +200,7 @@ export function Usuarios() {
                 value={filtroTemp}
                 onChange={(e) => setFiltroTemp(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && (setFiltro(filtroTemp), setFiltroStatus(filtroStatusTemp), setFiltroCargo(filtroCargoTemp))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600"
               />
             </div>
 
@@ -191,7 +209,7 @@ export function Usuarios() {
               <select
                 value={filtroStatusTemp}
                 onChange={(e) => setFiltroStatusTemp(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600"
               >
                 <option value="">Todos os status</option>
                 <option value="ativo">Ativo</option>
@@ -204,7 +222,7 @@ export function Usuarios() {
               <select
                 value={filtroCargoTemp}
                 onChange={(e) => setFilterCargoTemp(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600"
               >
                 <option value="">Todos os cargos</option>
                 {cargos.map(cargo => (
@@ -218,7 +236,7 @@ export function Usuarios() {
             <div>
               <button
                 onClick={() => { setFiltro(filtroTemp); setFiltroStatus(filtroStatusTemp); setFiltroCargo(filtroCargoTemp); }}
-                className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
               >
                 <Icon name="search" />
                 Filtrar
@@ -240,14 +258,14 @@ export function Usuarios() {
 
         {/* Indicador de filtros ativos */}
         {(filtro || filtroStatus || filtroCargo) && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-4">
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 mb-4">
             <div className="flex items-center gap-2">
-              <Icon name="filter" className="text-green-600 dark:text-green-400" />
-              <span className="text-sm font-medium text-green-700 dark:text-green-300">
+              <Icon name="filter" className="text-indigo-800 dark:text-indigo-400" />
+              <span className="text-sm font-medium text-indigo-900 dark:text-indigo-300">
                 Filtros ativos:
-                {filtro && <span className="ml-1 px-2 py-1 bg-green-100 dark:bg-green-800 rounded text-xs">{filtro}</span>}
-                {filtroStatus && <span className="ml-1 px-2 py-1 bg-green-100 dark:bg-green-800 rounded text-xs">{filtroStatus === 'ativo' ? 'Ativo' : 'Inativo'}</span>}
-                {filtroCargo && <span className="ml-1 px-2 py-1 bg-green-100 dark:bg-green-800 rounded text-xs">{cargos.find(c => c.id.toString() === filtroCargo)?.nome}</span>}
+                {filtro && <span className="ml-1 px-2 py-1 bg-indigo-100 dark:bg-indigo-800 rounded text-xs">{filtro}</span>}
+                {filtroStatus && <span className="ml-1 px-2 py-1 bg-indigo-100 dark:bg-indigo-800 rounded text-xs">{filtroStatus === 'ativo' ? 'Ativo' : 'Inativo'}</span>}
+                {filtroCargo && <span className="ml-1 px-2 py-1 bg-indigo-100 dark:bg-indigo-800 rounded text-xs">{cargos.find(c => c.id.toString() === filtroCargo)?.nome}</span>}
               </span>
             </div>
           </div>
@@ -270,54 +288,53 @@ export function Usuarios() {
           ) : (
             <>
               <div className="grid grid-cols-5 gap-4 p-4 bg-background dark:bg-gray-800 border-b border-gray-200 dark:border-0 font-semibold text-foreground">
-                <div className="text-center">Nome</div>
-                <div className="text-center">Username</div>
-                <div className="text-center">Cargo</div>
-                <div className="text-center">Status</div>
+                <div>Nome</div>
+                <div>Username</div>
+                <div>Cargo</div>
+                <div>Status</div>
                 <div className="text-center">Ações</div>
               </div>
 
               {usuariosFiltrados.map((user) => (
-                <div key={user.id} className="grid grid-cols-5 gap-4 p-4 border-b border-gray-200 dark:border-0 hover:bg-background dark:hover:bg-gray-700 transition-colors duration-200">
-                  <div className="text-center">
-                    <div className="font-medium text-foreground">{user.nome}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-foreground">{user.username || '-'}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-foreground">{user.cargoNome || '-'}</div>
-                  </div>
-                  <div className="text-center flex justify-center">
-                    <span className={`text-sm font-semibold ${
-                      user.ativo
-                        ? 'text-green-700 dark:text-green-400'
-                        : 'text-red-700 dark:text-red-400'
-                    }`}>
+                <div
+                  key={user.id}
+                  className="grid grid-cols-5 gap-4 p-4 border-b border-gray-200 dark:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-150 items-center"
+                >
+                  <div className="text-foreground font-semibold">{user.nome}</div>
+                  <div className="text-muted-foreground">{user.username || '-'}</div>
+                  <div className="text-muted-foreground">{user.cargoNome || '-'}</div>
+                  <div>
+                    <span
+                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${user.ativo
+                        ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}
+                    >
+                      <Icon name={user.ativo ? 'check-circle' : 'times-circle'} />
                       {user.ativo ? 'Ativo' : 'Inativo'}
                     </span>
                   </div>
-                  <div className="text-center flex justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <button
-                      onClick={() => abrirVisualizacao(user)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                       title="Visualizar"
+                      onClick={() => abrirVisualizacao(user)}
                     >
-                      <Icon name="eye" size="sm" />
+                      <Icon name="eye" />
                     </button>
                     <button
-                      onClick={() => abrirEdicao(user)}
-                      className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
                       title="Editar"
+                      onClick={() => abrirEdicao(user)}
                     >
-                      <Icon name="edit" size="sm" />
+                      <Icon name="edit" />
                     </button>
                     <button
-                      onClick={() => abrirExclusao(user)}
-                      className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       title="Excluir"
+                      onClick={() => abrirExclusao(user)}
                     >
-                      <Icon name="trash" size="sm" />
+                      <Icon name="trash" />
                     </button>
                   </div>
                 </div>

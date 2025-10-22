@@ -36,6 +36,9 @@ namespace Backend.Api.Models
         [StringLength(8)]
         public string? Cep { get; set; }
 
+        [StringLength(500)]
+        public string? Observacoes { get; set; }
+
         public bool Ativo { get; set; } = true;
 
         public DateTime DataCriacao { get; set; } = DateTime.Now;

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCPF, cleanNumericString } from '../../../utils/formatters';
 import { entitiesService } from '../../../services/entitiesService';
+import { buildCommonHeaders } from '../../../services/api';
 import Icon from '../../../components/UI/Icon';
+import { Icon as ThemedIcon } from '../../../ui';
 import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
 import { ConfirmDeleteModal } from '../../../components/UI/feedback/ConfirmDeleteModal';
 import { condutorConfig } from '../../../components/Condutores/CondutorConfig';
@@ -77,7 +79,9 @@ export function ListarCondutores() {
         params.append('Status', filtroStatus === 'ativo' ? 'true' : 'false');
       }
 
-      const response = await fetch(`${API_BASE_URL}/condutores?${params}`);
+      const response = await fetch(`${API_BASE_URL}/condutores?${params}`, {
+        headers: buildCommonHeaders()
+      });
 
       if (!response.ok) {
         throw new Error(`Erro ${response.status}: ${response.statusText}`);
@@ -179,7 +183,7 @@ export function ListarCondutores() {
         <div className="w-full px-6 py-8">
           <div className="flex items-center justify-center py-16">
             <div className="flex items-center gap-4">
-              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
               <span className="text-muted-foreground">Carregando condutores...</span>
             </div>
           </div>
@@ -190,20 +194,24 @@ export function ListarCondutores() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="w-full px-2 py-4">
+      <div className="w-full py-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-green-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Icon name="user" className="text-white" size="xl" />
+            <div className="relative w-14 h-14 rounded-xl shadow-lg shadow-orange-600/30 overflow-hidden">
+              <span className="absolute inset-0 bg-gradient-to-br from-orange-700 via-orange-600 to-orange-500 dark:from-orange-600 dark:via-orange-500 dark:to-orange-400" aria-hidden="true" />
+              <span className="absolute inset-0 opacity-40 blur-lg bg-orange-600" aria-hidden="true" />
+              <div className="relative h-full w-full flex items-center justify-center">
+                <ThemedIcon name="user" className="!text-white text-2xl" />
+              </div>
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-1">Condutores</h1>
-              <p className="text-muted-foreground text-lg">Gerencie os condutores cadastrados</p>
+              <p className="text-muted-foreground text-lg">Gerencie os condutores cadastrados no sistema</p>
             </div>
           </div>
           <button
-            className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="px-6 py-3 bg-gradient-to-r from-orange-700 to-orange-600 hover:from-orange-800 hover:to-orange-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
             onClick={abrirNovo}
           >
             <Icon name="plus" size="lg" />
@@ -215,26 +223,26 @@ export function ListarCondutores() {
         <div className="bg-card rounded-lg border border-gray-200 dark:border-0 p-6 mb-6">
           <div className="grid grid-cols-5 gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Buscar por Nome</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Buscar</label>
               <input
                 type="text"
                 placeholder="Nome do condutor..."
                 value={filtroTemp}
                 onChange={(e) => setFiltroTemp(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && aplicarFiltros()}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Buscar por CPF</label>
+              <label className="block text-sm font-medium text-foreground mb-2">CPF</label>
               <input
                 type="text"
                 placeholder="000.000.000-00"
                 value={filtroCPFTemp}
                 onChange={(e) => setFiltroCPFTemp(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && aplicarFiltros()}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600"
               />
             </div>
 
@@ -243,7 +251,7 @@ export function ListarCondutores() {
               <select
                 value={filtroStatusTemp}
                 onChange={(e) => setFiltroStatusTemp(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-0 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600"
               >
                 <option value="">Todos os status</option>
                 <option value="ativo">Ativo</option>
@@ -254,7 +262,7 @@ export function ListarCondutores() {
             <div>
               <button
                 onClick={aplicarFiltros}
-                className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                className="w-full px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
               >
                 <Icon name="search" />
                 Filtrar
@@ -276,14 +284,14 @@ export function ListarCondutores() {
 
         {/* Indicador de filtros ativos */}
         {(filtro || filtroCPF || filtroStatus) && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-4">
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mb-4">
             <div className="flex items-center gap-2">
-              <Icon name="filter" className="text-green-600 dark:text-green-400" />
-              <span className="text-sm font-medium text-green-700 dark:text-green-300">
+              <Icon name="filter" className="text-orange-700 dark:text-orange-400" />
+              <span className="text-sm font-medium text-orange-800 dark:text-orange-300">
                 Filtros ativos:
-                {filtro && <span className="ml-1 px-2 py-1 bg-green-100 dark:bg-green-800 rounded text-xs">Nome: {filtro}</span>}
-                {filtroCPF && <span className="ml-1 px-2 py-1 bg-green-100 dark:bg-green-800 rounded text-xs">CPF: {filtroCPF}</span>}
-                {filtroStatus && <span className="ml-1 px-2 py-1 bg-green-100 dark:bg-green-800 rounded text-xs">{filtroStatus === 'ativo' ? 'Ativo' : 'Inativo'}</span>}
+                {filtro && <span className="ml-1 px-2 py-1 bg-orange-100 dark:bg-orange-800 rounded text-xs">{filtro}</span>}
+                {filtroCPF && <span className="ml-1 px-2 py-1 bg-orange-100 dark:bg-orange-800 rounded text-xs">{filtroCPF}</span>}
+                {filtroStatus && <span className="ml-1 px-2 py-1 bg-orange-100 dark:bg-orange-800 rounded text-xs">{filtroStatus === 'ativo' ? 'Ativo' : 'Inativo'}</span>}
               </span>
             </div>
           </div>
@@ -297,10 +305,10 @@ export function ListarCondutores() {
                 <Icon name="user" className="text-2xl text-gray-400" />
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">
-                {(filtro || filtroStatus) ? 'Nenhum condutor encontrado com os filtros aplicados' : 'Nenhum condutor encontrado'}
+                {(filtro || filtroCPF || filtroStatus) ? 'Nenhum condutor encontrado com os filtros aplicados' : 'Nenhum condutor encontrado'}
               </h3>
               <p className="text-muted-foreground text-center">
-                {(filtro || filtroStatus) ? 'Tente ajustar os filtros ou limpar para ver todos os condutores.' : 'Adicione um novo condutor para começar.'}
+                {(filtro || filtroCPF || filtroStatus) ? 'Tente ajustar os filtros ou limpar para ver todos os condutores.' : 'Adicione um novo condutor para começar.'}
               </p>
             </div>
           ) : (
@@ -320,32 +328,32 @@ export function ListarCondutores() {
                   <div className="text-center">
                     <div className="font-medium text-foreground">{formatCPF(condutor.cpf)}</div>
                   </div>
-                  <div className="text-center flex justify-center">
-                    <span className={`text-sm font-semibold ${
-                      condutor.ativo
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400'
-                    }`}>
-                      {condutor.ativo ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </div>
+                      <div className="text-center flex justify-center">
+                        <span className={`text-sm font-semibold ${
+                          condutor.ativo
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {condutor.ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </div>
                   <div className="flex items-center justify-center gap-2">
                     <button
-                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200"
+                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => abrirModalVisualizacao(condutor)}
                       title="Visualizar"
                     >
                       <Icon name="eye" />
                     </button>
                     <button
-                      className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200"
+                      className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => abrirEdicao(condutor)}
                       title="Editar"
                     >
                       <Icon name="edit" />
                     </button>
                     <button
-                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200"
+                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => abrirModalExclusao(condutor)}
                       title="Excluir"
                     >
@@ -398,7 +406,7 @@ export function ListarCondutores() {
                     setTamanhoPagina(Number(e.target.value));
                     setPaginaAtual(1);
                   }}
-                  className="px-3 py-1 border border-gray-300 dark:border-0 rounded bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                  className="px-3 py-1 border border-gray-300 dark:border-0 rounded bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-orange-600/20 focus:border-orange-600"
                 >
                   <option value={5}>5</option>
                   <option value={10}>10</option>

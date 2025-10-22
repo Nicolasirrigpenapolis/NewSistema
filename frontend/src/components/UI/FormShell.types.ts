@@ -12,6 +12,16 @@ export interface FormShellProps {
   subtitle?: string;
   
   /**
+   * Optional icon name to display next to the title
+   */
+  headerIcon?: string;
+  
+  /**
+   * Optional color for the header icon
+   */
+  headerColor?: string;
+  
+  /**
    * Action buttons displayed in the footer (e.g., Save, Cancel)
    */
   actions?: ReactNode;

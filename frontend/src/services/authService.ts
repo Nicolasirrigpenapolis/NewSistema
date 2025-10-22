@@ -26,10 +26,14 @@ class AuthService {
    */
   async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
     try {
+      // Obter tenant do localStorage
+      const tenantId = localStorage.getItem('empresaSelecionada');
+      
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(tenantId ? { 'X-Tenant-Id': tenantId } : {})
         },
         body: JSON.stringify(credentials)
       });
@@ -128,6 +132,77 @@ class AuthService {
   }
 
   /**
+   * Atualizar usuário existente
+   */
+  async updateUser(id: number, userData: Partial<RegisterRequest> & { email?: string; ativo?: boolean }): Promise<ApiResponse<void>> {
+    try {
+      const token = this.getToken();
+      const response = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(userData)
+      });
+
+      if (response.ok) {
+        return {
+          sucesso: true,
+          mensagem: 'Usuário atualizado com sucesso'
+        };
+      } else {
+        const result = await response.json();
+        return {
+          sucesso: false,
+          mensagem: result.message || 'Erro ao atualizar usuário'
+        };
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      return {
+        sucesso: false,
+        mensagem: 'Erro de conexão com o servidor'
+      };
+    }
+  }
+
+  /**
+   * Excluir usuário
+   */
+  async deleteUser(id: number): Promise<ApiResponse<void>> {
+    try {
+      const token = this.getToken();
+      const response = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok || response.status === 204) {
+        return {
+          sucesso: true,
+          mensagem: 'Usuário excluído com sucesso'
+        };
+      } else {
+        const result = await response.json();
+        return {
+          sucesso: false,
+          mensagem: result.message || 'Erro ao excluir usuário'
+        };
+      }
+    } catch (error) {
+      console.error('Erro ao excluir usuário:', error);
+      return {
+        sucesso: false,
+        mensagem: 'Erro de conexão com o servidor'
+      };
+    }
+  }
+
+  /**
    * Fazer logout
    */
   logout(): void {
@@ -149,12 +224,6 @@ class AuthService {
   isAuthenticated(): boolean {
     const token = this.getToken();
     if (!token) return false;
-
-    // Em desenvolvimento, não verificar expiração do token
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    if (isDevelopment) {
-      return true;
-    }
 
     // Verificar se token não expirou
     try {
@@ -238,9 +307,8 @@ class AuthService {
       },
     });
 
-    // Se retornar 401, token expirou (desabilitado em desenvolvimento)
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    if (response.status === 401 && !isDevelopment) {
+    // Se retornar 401, token expirou
+    if (response.status === 401) {
       this.clearAuthData();
       throw new Error('Sessão expirada');
     }

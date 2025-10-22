@@ -12,6 +12,8 @@ export interface RelatorioManutencaoFiltro {
   pageSize?: number;
   sortBy?: string;
   sortDirection?: string;
+  usuarioSolicitante?: string;
+  tituloRelatorio?: string;
 }
 
 export interface RelatorioDespesasFiltro {
@@ -23,6 +25,8 @@ export interface RelatorioDespesasFiltro {
   pageSize?: number;
   sortBy?: string;
   sortDirection?: string;
+  usuarioSolicitante?: string;
+  tituloRelatorio?: string;
 }
 
 // Tipos para os dados de resposta
@@ -41,6 +45,7 @@ export interface RelatorioManutencaoItem {
   dataManutencao: string;
   veiculoPlaca: string;
   veiculoMarca: string;
+  veiculoDescricao?: string;
   descricao: string;
   fornecedorNome?: string;
   valorMaoObra: number;
@@ -189,6 +194,9 @@ class RelatoriosService {
         }
       });
 
+      // Adiciona timestamp para evitar cache
+      params.append('_t', Date.now().toString());
+
       const response = await api.get<Blob>(`/relatoriomanutencao/export/excel?${params.toString()}`, {
         responseType: 'blob'
       });
@@ -219,6 +227,9 @@ class RelatoriosService {
           params.append(key, value.toString());
         }
       });
+
+      // Adiciona timestamp para evitar cache
+      params.append('_t', Date.now().toString());
 
       const response = await api.get<Blob>(`/relatoriomanutencao/export/pdf?${params.toString()}`, {
         responseType: 'blob'
@@ -252,7 +263,7 @@ class RelatoriosService {
         }
       });
 
-      const response = await api.get<PagedResult<RelatorioDespesasItem>>(`/relatoriodespesas?${params.toString()}`);
+      const response = await api.get<PagedResult<RelatorioDespesasItem>>(`/viagem?${params.toString()}`);
 
       return {
         success: true,
@@ -339,6 +350,9 @@ class RelatoriosService {
         }
       });
 
+      // Adiciona timestamp para evitar cache
+      params.append('_t', Date.now().toString());
+
       const response = await api.get<Blob>(`/relatoriodespesas/export/excel?${params.toString()}`, {
         responseType: 'blob'
       });
@@ -369,6 +383,9 @@ class RelatoriosService {
           params.append(key, value.toString());
         }
       });
+
+      // Adiciona timestamp para evitar cache
+      params.append('_t', Date.now().toString());
 
       const response = await api.get<Blob>(`/relatoriodespesas/export/pdf?${params.toString()}`, {
         responseType: 'blob'

@@ -25,7 +25,7 @@ namespace Backend.Api.Controllers
         }
 
         [HttpGet]
-        [RequiresPermission("admin.roles.read")]
+        [RequiresPermission("cargos.listar")]
         public async Task<IActionResult> GetCargos()
         {
             try
@@ -54,6 +54,7 @@ namespace Backend.Api.Controllers
         }
 
         [HttpGet("{id}")]
+        [RequiresPermission("cargos.listar")]
         public async Task<IActionResult> GetCargo(int id)
         {
             try
@@ -87,16 +88,11 @@ namespace Backend.Api.Controllers
         }
 
         [HttpPost]
+        [RequiresPermission("cargos.criar")]
         public async Task<IActionResult> CreateCargo([FromBody] CargoCreateRequest request)
         {
             try
             {
-                // Verificar se é Programador
-                if (!await IsUserProgramador())
-                {
-                    return Forbid("Apenas usuários com cargo 'Programador' podem criar cargos");
-                }
-
                 // Verificar se já existe um cargo com o mesmo nome
                 var existingCargo = await _context.Cargos
                     .FirstOrDefaultAsync(c => c.Nome.ToLower() == request.Nome.ToLower());
@@ -137,15 +133,11 @@ namespace Backend.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [RequiresPermission("cargos.editar")]
         public async Task<IActionResult> UpdateCargo(int id, [FromBody] CargoUpdateRequest request)
         {
             try
             {
-                // Verificar se é Programador
-                if (!await IsUserProgramador())
-                {
-                    return Forbid("Apenas usuários com cargo 'Programador' podem atualizar cargos");
-                }
 
                 var cargo = await _context.Cargos.FindAsync(id);
                 if (cargo == null)
@@ -178,15 +170,11 @@ namespace Backend.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [RequiresPermission("cargos.excluir")]
         public async Task<IActionResult> DeleteCargo(int id)
         {
             try
             {
-                // Verificar se é Programador
-                if (!await IsUserProgramador())
-                {
-                    return Forbid("Apenas usuários com cargo 'Programador' podem excluir cargos");
-                }
 
                 var cargo = await _context.Cargos
                     .Include(c => c.Usuarios)
@@ -215,7 +203,7 @@ namespace Backend.Api.Controllers
         }
 
         [HttpGet("{cargoId}/permissoes")]
-        [RequiresPermission("admin.permissions.read")]
+        [RequiresPermission("cargos.gerenciar_permissoes")]
         public async Task<IActionResult> GetPermissoesByCargo(int cargoId)
         {
             try
@@ -230,7 +218,7 @@ namespace Backend.Api.Controllers
         }
 
         [HttpPost("{cargoId}/permissoes/{permissaoId}")]
-        [RequiresPermission("admin.permissions.assign")]
+        [RequiresPermission("cargos.gerenciar_permissoes")]
         public async Task<IActionResult> AtribuirPermissaoToCargo(int cargoId, int permissaoId)
         {
             try
@@ -245,7 +233,7 @@ namespace Backend.Api.Controllers
         }
 
         [HttpDelete("{cargoId}/permissoes/{permissaoId}")]
-        [RequiresPermission("admin.permissions.assign")]
+        [RequiresPermission("cargos.gerenciar_permissoes")]
         public async Task<IActionResult> RemoverPermissaoFromCargo(int cargoId, int permissaoId)
         {
             try
@@ -267,48 +255,94 @@ namespace Backend.Api.Controllers
         }
 
         [HttpPost("{cargoId}/permissoes/bulk")]
-        [RequiresPermission("admin.permissions.assign")]
-        public async Task<IActionResult> AtualizarPermissoesCargo(int cargoId, [FromBody] List<int> permissaoIds)
+        [RequiresPermission("cargos.gerenciar_permissoes")]
+        public async Task<IActionResult> AtualizarPermissoesCargo(int cargoId, [FromBody] System.Text.Json.JsonElement payload)
         {
             try
             {
-                // Verificar se o cargo é "Programador"
-                var cargo = await _context.Cargos.FindAsync(cargoId);
-                if (cargo != null && cargo.Nome == "Programador")
+                List<int> permissaoIds = new List<int>();
+
+                // Aceitar array direto: [1,2,3] ou objeto { permissaoIds: [1,2,3] } ou { ids: [..] }
+                try
                 {
-                    return BadRequest(new { message = "Não é possível modificar permissões do cargo Programador" });
+                    if (payload.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        foreach (var el in payload.EnumerateArray())
+                        {
+                            if (el.ValueKind == System.Text.Json.JsonValueKind.Number && el.TryGetInt32(out var v))
+                                permissaoIds.Add(v);
+                        }
+                    }
+                    else if (payload.ValueKind == System.Text.Json.JsonValueKind.Object)
+                    {
+                        if (payload.TryGetProperty("permissaoIds", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            foreach (var el in p.EnumerateArray()) if (el.ValueKind == System.Text.Json.JsonValueKind.Number && el.TryGetInt32(out var v)) permissaoIds.Add(v);
+                        }
+                        else if (payload.TryGetProperty("ids", out var q) && q.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            foreach (var el in q.EnumerateArray()) if (el.ValueKind == System.Text.Json.JsonValueKind.Number && el.TryGetInt32(out var v)) permissaoIds.Add(v);
+                        }
+                    }
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[CARGOS] Erro ao desserializar payload bulk: {ex.Message}");
+                    return BadRequest(new { message = "Formato inválido para lista de permissões" });
+                }
+
+                Console.WriteLine($"[CARGOS] Recebendo requisição bulk para cargo {cargoId} com {permissaoIds?.Count ?? 0} permissões");
+
+                if (permissaoIds == null || permissaoIds.Count == 0)
+                {
+                    // permitir lista vazia -> limpa permissões
+                }
+
+                // Verificar se o cargo existe
+                var cargo = await _context.Cargos.FindAsync(cargoId);
+                if (cargo == null)
+                {
+                    return NotFound(new { message = "Cargo não encontrado" });
+                }
+
+                // COMENTADO: Permitir modificar permissões do Programador durante testes
+                // if (cargo.Nome == "Programador")
+                // {
+                //     return BadRequest(new { message = "Não é possível modificar permissões do cargo Programador" });
+                // }
 
                 // Remover todas as permissões atuais do cargo
-                var permissoesAtuais = await _permissaoService.GetPermissoesByCargoIdAsync(cargoId);
-                foreach (var permissao in permissoesAtuais)
-                {
-                    await _permissaoService.RemoverPermissaoFromCargoAsync(cargoId, permissao.Id);
-                }
+                var cargoPermissoes = await _context.CargoPermissoes
+                    .Where(cp => cp.CargoId == cargoId)
+                    .ToListAsync();
+
+                _context.CargoPermissoes.RemoveRange(cargoPermissoes);
 
                 // Adicionar as novas permissões
-                foreach (var permissaoId in permissaoIds)
+                foreach (var permissaoId in permissaoIds ?? System.Linq.Enumerable.Empty<int>())
                 {
-                    await _permissaoService.AtribuirPermissaoToCargoAsync(cargoId, permissaoId);
+                    var permissao = await _context.Permissoes.FindAsync(permissaoId);
+                    if (permissao != null)
+                    {
+                        _context.CargoPermissoes.Add(new CargoPermissao
+                        {
+                            CargoId = cargoId,
+                            PermissaoId = permissaoId
+                        });
+                    }
                 }
 
-                return Ok(new { message = "Permissões do cargo atualizadas com sucesso" });
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine($"[CARGOS] Permissões do cargo {cargoId} atualizadas com sucesso - {permissaoIds?.Count ?? 0} permissões salvas");
+
+                return NoContent();
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[CARGOS] Erro ao atualizar permissões: {ex.Message}");
                 return StatusCode(500, new { message = "Erro interno do servidor", error = ex.Message });
             }
-        }
-
-        private async Task<bool> IsUserProgramador()
-        {
-            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (currentUserId == null || !int.TryParse(currentUserId, out var userId)) return false;
-
-            var currentUser = await _context.Usuarios
-                .Include(u => u.Cargo)
-                .FirstOrDefaultAsync(u => u.Id == userId);
-            return currentUser != null && currentUser.Cargo?.Nome == "Programador";
         }
     }
 }

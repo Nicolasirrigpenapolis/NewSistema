@@ -3,8 +3,27 @@
 
 import { RespostaAPI } from '../types/mdfe';
 import { EntityOption } from '../types/apiResponse';
+import { API_BASE_URL as API_BASE, buildCommonHeaders } from './api';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:5001/api';
+const normalizeHeaders = (headers?: HeadersInit): Record<string, string> => {
+  if (!headers) {
+    return {};
+  }
+
+  if (headers instanceof Headers) {
+    const result: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      result[key] = value;
+    });
+    return result;
+  }
+
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+
+  return headers;
+};
 
 class EntitiesService {
   // Request simples - sem transforma+º+Áes
@@ -13,12 +32,13 @@ class EntitiesService {
     options: RequestInit = {}
   ): Promise<RespostaAPI> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const { headers: optionHeaders, ...fetchOptions } = options;
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...fetchOptions,
         headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
+          ...buildCommonHeaders(),
+          ...normalizeHeaders(optionHeaders),
         },
-        ...options,
       });
 
       // Tenta obter o corpo da resposta, mesmo em caso de erro
@@ -30,9 +50,30 @@ class EntitiesService {
       }
 
       if (!response.ok) {
+        // Extrair mensagem de erro do ModelState validation (ASP.NET Core)
+        let errorMessage = responseData?.message || `Erro HTTP: ${response.status}`;
+        
+        // Se tem erros de validação do ModelState
+        if (responseData?.errors && typeof responseData.errors === 'object') {
+          const validationErrors: string[] = [];
+          Object.keys(responseData.errors).forEach(field => {
+            const fieldErrors = responseData.errors[field];
+            if (Array.isArray(fieldErrors)) {
+              validationErrors.push(...fieldErrors);
+            }
+          });
+          if (validationErrors.length > 0) {
+            errorMessage = validationErrors.join('; ');
+          }
+        }
+        // Se tem título de erro padrão do ASP.NET Core
+        else if (responseData?.title) {
+          errorMessage = responseData.title;
+        }
+        
         return {
           sucesso: false,
-          mensagem: responseData?.message || `Erro HTTP: ${response.status}`,
+          mensagem: errorMessage,
           codigoErro: response.status.toString(),
           dados: responseData, // Inclui os dados do erro se houver
         };

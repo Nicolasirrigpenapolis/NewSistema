@@ -4,6 +4,7 @@ using Backend.Api.Data;
 using Backend.Api.Interfaces;
 using Backend.Api.DTOs;
 using Backend.Api.Extensions;
+using System.Security.Claims;
 
 namespace Backend.Api.Controllers
 {
@@ -89,6 +90,9 @@ namespace Backend.Api.Controllers
                     DataManutencao = m.DataManutencao,
                     VeiculoPlaca = m.Veiculo?.Placa ?? "",
                     VeiculoMarca = m.Veiculo?.Marca ?? "",
+                    VeiculoDescricao = m.Veiculo != null
+                        ? $"{m.Veiculo.Placa ?? ""}{(!string.IsNullOrWhiteSpace(m.Veiculo.Marca) ? $" - {m.Veiculo.Marca}" : "")}"
+                        : "",
                     Descricao = m.Descricao,
                     FornecedorNome = m.Fornecedor?.Nome,
                     ValorMaoObra = m.ValorMaoObra,
@@ -219,6 +223,12 @@ namespace Backend.Api.Controllers
                 }
 
                 var excelBytes = await _exportService.ExportarManutencaoExcelAsync(_context, filtro);
+                
+                // Adiciona headers para evitar cache
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "relatorio-manutencao.xlsx");
             }
             catch (Exception ex)
@@ -244,7 +254,25 @@ namespace Backend.Api.Controllers
                     return BadRequest(new { message = "Data fim deve ser maior ou igual à data início" });
                 }
 
+                var userName = User?.Identity?.Name;
+                if (string.IsNullOrWhiteSpace(userName))
+                {
+                    userName = User?.Claims?
+                        .FirstOrDefault(c => c.Type == "name" || c.Type == "nome" || c.Type == ClaimTypes.Name || c.Type == ClaimTypes.GivenName)?.Value;
+                }
+
+                filtro.UsuarioSolicitante ??= string.IsNullOrWhiteSpace(userName)
+                    ? "Usuário não identificado"
+                    : userName;
+                filtro.TituloRelatorio ??= "Relatório de Manutenções de Veículos";
+
                 var pdfBytes = await _exportService.ExportarManutencaoPdfAsync(_context, filtro);
+                
+                // Adiciona headers para evitar cache
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return File(pdfBytes, "application/pdf", "relatorio-manutencao.pdf");
             }
             catch (Exception ex)

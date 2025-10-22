@@ -10,6 +10,16 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const applyThemeClass = (mode: ThemeMode) => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const root = document.documentElement;
+  root.classList.toggle('dark', mode === 'dark');
+  root.style.setProperty('color-scheme', mode);
+};
+
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
@@ -33,46 +43,57 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  // Inicializar tema de forma síncrona para evitar flashes
   const getInitialTheme = (): ThemeMode => {
     if (typeof window === 'undefined') return 'light';
 
     const savedTheme = localStorage.getItem('mdfe-theme') as ThemeMode;
-    if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      applyThemeClass(savedTheme);
       return savedTheme;
     }
 
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const resolvedTheme = prefersDark ? 'dark' : 'light';
+    applyThemeClass(resolvedTheme);
+    return resolvedTheme;
   };
 
-  const initialTheme = getInitialTheme();
-  const [themeMode, setThemeMode] = useState<ThemeMode>(initialTheme);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getInitialTheme());
+  const [hasExplicitPreference, setHasExplicitPreference] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const savedTheme = localStorage.getItem('mdfe-theme');
+    return savedTheme === 'light' || savedTheme === 'dark';
+  });
 
   const isDark = themeMode === 'dark';
 
-  const applyTheme = (mode: ThemeMode) => {
-    // Atualizar documento para Tailwind/Shadcn
-    if (mode === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
-
-  // Aplicar tema inicial apenas uma vez
   useEffect(() => {
-    applyTheme(initialTheme);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    applyThemeClass(themeMode);
+
+    if (typeof window !== 'undefined' && hasExplicitPreference) {
+      localStorage.setItem('mdfe-theme', themeMode);
+    }
+  }, [themeMode, hasExplicitPreference]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (event: MediaQueryListEvent) => {
+      if (!hasExplicitPreference) {
+        setThemeMode(event.matches ? 'dark' : 'light');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [hasExplicitPreference]);
 
   const toggleTheme = () => {
-    const newTheme = themeMode === 'light' ? 'dark' : 'light';
-
-    // Aplicar todas as mudanças em lote
-    setThemeMode(newTheme);
-    applyTheme(newTheme);
-
-    // Salvar preferência
-    localStorage.setItem('mdfe-theme', newTheme);
+    setHasExplicitPreference(true);
+    setThemeMode((current) => (current === 'light' ? 'dark' : 'light'));
   };
 
   return (

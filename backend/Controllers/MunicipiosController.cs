@@ -56,7 +56,8 @@ namespace Backend.Api.Controllers
             {
                 Codigo = dto.Codigo,
                 Nome = dto.Nome.Trim(),
-                Uf = dto.Uf.Trim().ToUpper()
+                Uf = dto.Uf.Trim().ToUpper(),
+                Ativo = true // Sempre ativo ao criar
             };
         }
 
@@ -255,63 +256,68 @@ namespace Backend.Api.Controllers
 
                 resultado.TotalEstados = municipiosIBGE.Select(m => m.UF).Distinct().Count();
 
-                using var transaction = await _context.Database.BeginTransactionAsync();
-
-                try
+                // Usar a estratégia de execução para suportar retry com transações
+                var strategy = _context.Database.CreateExecutionStrategy();
+                await strategy.ExecuteAsync(async () =>
                 {
-                    var municipiosExistentes = await _context.Municipios
-                        .ToDictionaryAsync(m => m.Codigo, m => m);
+                    using var transaction = await _context.Database.BeginTransactionAsync();
 
-                    var municipiosParaInserir = new List<Municipio>();
-
-                    foreach (var municipioIBGE in municipiosIBGE)
+                    try
                     {
-                        if (municipiosExistentes.TryGetValue(municipioIBGE.Id, out var existente))
+                        var municipiosExistentes = await _context.Municipios
+                            .ToDictionaryAsync(m => m.Codigo, m => m);
+
+                        var municipiosParaInserir = new List<Municipio>();
+
+                        foreach (var municipioIBGE in municipiosIBGE)
                         {
-                            if (existente.Nome != municipioIBGE.Nome ||
-                                existente.Uf != municipioIBGE.UF ||
-                                !existente.Ativo)
+                            if (municipiosExistentes.TryGetValue(municipioIBGE.Id, out var existente))
                             {
-                                existente.Nome = municipioIBGE.Nome;
-                                existente.Uf = municipioIBGE.UF;
-                                existente.Ativo = true;
-                                resultado.TotalAtualizados++;
+                                if (existente.Nome != municipioIBGE.Nome ||
+                                    existente.Uf != municipioIBGE.UF ||
+                                    !existente.Ativo)
+                                {
+                                    existente.Nome = municipioIBGE.Nome;
+                                    existente.Uf = municipioIBGE.UF;
+                                    existente.Ativo = true;
+                                    resultado.TotalAtualizados++;
+                                }
+                                else
+                                {
+                                    resultado.TotalIgnorados++;
+                                }
                             }
                             else
                             {
-                                resultado.TotalIgnorados++;
+                                municipiosParaInserir.Add(new Municipio
+                                {
+                                    Codigo = municipioIBGE.Id,
+                                    Nome = municipioIBGE.Nome,
+                                    Uf = municipioIBGE.UF,
+                                    Ativo = true
+                                });
                             }
                         }
-                        else
+
+                        if (municipiosParaInserir.Any())
                         {
-                            municipiosParaInserir.Add(new Municipio
-                            {
-                                Codigo = municipioIBGE.Id,
-                                Nome = municipioIBGE.Nome,
-                                Uf = municipioIBGE.UF,
-                                Ativo = true
-                            });
+                            await _context.Municipios.AddRangeAsync(municipiosParaInserir);
+                            resultado.TotalInseridos = municipiosParaInserir.Count;
                         }
-                    }
 
-                    if (municipiosParaInserir.Any())
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        _logger.LogInformation("Import concluído: {TotalInseridos} inseridos, {TotalAtualizados} atualizados, {TotalIgnorados} ignorados",
+                            resultado.TotalInseridos, resultado.TotalAtualizados, resultado.TotalIgnorados);
+                    }
+                    catch (Exception ex)
                     {
-                        await _context.Municipios.AddRangeAsync(municipiosParaInserir);
-                        resultado.TotalInseridos = municipiosParaInserir.Count;
+                        await transaction.RollbackAsync();
+                        _logger.LogError(ex, "Erro durante importação de municípios");
+                        throw;
                     }
-
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    _logger.LogInformation("Import concluído: {TotalInseridos} inseridos, {TotalAtualizados} atualizados, {TotalIgnorados} ignorados",
-                        resultado.TotalInseridos, resultado.TotalAtualizados, resultado.TotalIgnorados);
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(ex, "Erro durante importação de municípios");
-                    throw;
-                }
+                });
             }
             catch (Exception ex)
             {

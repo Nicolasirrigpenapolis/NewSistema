@@ -59,7 +59,6 @@ const FIELD_TRANSLATIONS: Record<string, string> = {
 // Mensagens de erro padrão (estáticas)
 const ERROR_MESSAGES: Record<string, string> = {
   // Erros de rede
-  'NETWORK_ERROR': 'Erro de conexão com o servidor. Verifique sua internet.',
   'TIMEOUT_ERROR': 'Tempo limite excedido. Tente novamente.',
 
   // Erros HTTP

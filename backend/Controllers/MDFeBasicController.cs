@@ -73,6 +73,37 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
+        /// Criar novo MDFe em branco (estado "Em Digitação")
+        /// </summary>
+        [HttpPost("novo")]
+        public async Task<ActionResult> NovoMDFe()
+        {
+            try
+            {
+                _logger.LogInformation("[MDFe] Iniciando criação de novo MDF-e em branco");
+
+                var mdfe = await _mdfeBusinessService.CreateBlankMDFeAsync();
+                
+                _logger.LogInformation("[MDFe] MDF-e criado com sucesso. ID: {Id}, Status: {Status}", 
+                    mdfe.Id, mdfe.StatusSefaz);
+
+                return Ok(new 
+                { 
+                    id = mdfe.Id,
+                    numero = mdfe.NumeroMdfe,
+                    serie = mdfe.Serie,
+                    status = mdfe.StatusSefaz,
+                    message = "MDF-e criado com sucesso. Complete os dados para transmissão."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[MDFe] Erro ao criar novo MDF-e em branco");
+                return StatusCode(500, new { message = "Erro ao criar MDF-e: " + ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Criar novo MDFe
         /// </summary>
         [HttpPost]

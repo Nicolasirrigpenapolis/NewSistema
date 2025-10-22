@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.IO;
+using System.Data.Common;
 using Backend.Api.Data;
 using Backend.Api.Models;
 using Backend.Api.Services;
@@ -15,19 +16,87 @@ using Backend.Api.HealthChecks;
 using Backend.Api.Providers.MDFe; // provider MDFe
 using Backend.Api.Configuracoes;
 using Backend.Api.Tenancia;
+using Backend.Api.Middleware;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configurações específicas da empresa instalada
-var secaoEmpresa = builder.Configuration.GetSection("Empresa");
-var opcoesEmpresa = secaoEmpresa.Get<OpcoesEmpresa>();
-if (opcoesEmpresa is null || string.IsNullOrWhiteSpace(opcoesEmpresa.IdentificadorEmpresa) || string.IsNullOrWhiteSpace(opcoesEmpresa.StringConexao))
+// ============================================
+// CONFIGURAÇÃO MULTI-TENANT
+// ============================================
+
+// Carregar configurações de empresas do arquivo JSON
+var configEmpresasPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuracoes", "ConfiguracoesEmpresas.json");
+if (!File.Exists(configEmpresasPath))
 {
-    throw new InvalidOperationException("Configuração da seção 'Empresa' ausente ou incompleta. Defina IdentificadorEmpresa, NomeExibicao e StringConexao no arquivo de configuração da instalação.");
+    throw new InvalidOperationException($"Arquivo de configuração de empresas não encontrado: {configEmpresasPath}");
 }
-builder.Services.AddSingleton(opcoesEmpresa);
-builder.Services.AddSingleton<IContextoEmpresa>(sp =>
+
+var configEmpresasJson = File.ReadAllText(configEmpresasPath);
+var configEmpresas = System.Text.Json.JsonSerializer.Deserialize<ConfiguracoesEmpresas>(configEmpresasJson);
+
+if (configEmpresas?.Empresas == null || !configEmpresas.Empresas.Any())
 {
+    throw new InvalidOperationException("Nenhuma empresa configurada no arquivo ConfiguracoesEmpresas.json");
+}
+
+// Registrar configurações de empresas
+builder.Services.Configure<ConfiguracoesEmpresas>(options =>
+{
+    options.Empresas = configEmpresas.Empresas;
+});
+
+// Registrar TenantService (scoped para ser único por requisição)
+builder.Services.AddScoped<ITenantService, TenantService>();
+
+// Criar OpcoesEmpresa e ContextoEmpresa dinâmicos baseados no tenant
+builder.Services.AddScoped<OpcoesEmpresa>(sp =>
+{
+    var tenantService = sp.GetRequiredService<ITenantService>();
+    var logger = sp.GetRequiredService<ILogger<Program>>();
+    var config = tenantService.TenantAtual;
+    
+    logger.LogInformation("[OpcoesEmpresa] TenantIdAtual: {TenantId}", tenantService.TenantIdAtual ?? "NULL");
+    
+    if (config == null)
+    {
+        // Se não há tenant definido, usar a primeira empresa disponível como padrão
+        var configEmpresas = sp.GetRequiredService<IOptions<ConfiguracoesEmpresas>>().Value;
+        config = configEmpresas.Empresas.FirstOrDefault(e => e.Ativo) 
+            ?? throw new InvalidOperationException("Nenhuma empresa ativa disponível");
+        
+        logger.LogWarning("[OpcoesEmpresa] Tenant não definido! Usando fallback: {EmpresaId}", config.Id);
+    }
+    else
+    {
+        logger.LogInformation("[OpcoesEmpresa] Usando tenant configurado: {EmpresaId}", config.Id);
+    }
+    
+    return new OpcoesEmpresa
+    {
+        IdentificadorEmpresa = config.Id,
+        NomeExibicao = config.NomeExibicao,
+        StringConexao = config.StringConexao,
+        Armazenamento = new OpcoesArmazenamentoEmpresa
+        {
+            CaminhoBase = string.IsNullOrWhiteSpace(config.CertificadoCaminho) 
+                ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "arquivos", config.Id) 
+                : Path.GetDirectoryName(config.CertificadoCaminho) ?? AppDomain.CurrentDomain.BaseDirectory,
+            PastaLogos = "logos",
+            PastaCertificados = "certificados",
+            PastaXml = "xml"
+        },
+        IdentidadeVisual = new OpcoesIdentidadeVisualEmpresa
+        {
+            ArquivoLogotipo = config.Logo,
+            CorPrimaria = config.CorPrimaria
+        }
+    };
+});
+
+builder.Services.AddScoped<IContextoEmpresa>(sp =>
+{
+    var opcoesEmpresa = sp.GetRequiredService<OpcoesEmpresa>();
     var logger = sp.GetRequiredService<ILogger<ContextoEmpresa>>();
     return new ContextoEmpresa(opcoesEmpresa, logger);
 });
@@ -76,49 +145,63 @@ builder.Services.AddDbContext<SistemaContext>((sp, options) =>
         logger.LogInformation("[DB] Empresa {Empresa} usando string de conexão vinda da variável MDFE_DB_CONN.", contextoEmpresa.IdentificadorEmpresa);
     }
 
-    // Ajustes de performance locais:
-    // - Connect Timeout reduzido para falhar rápido
-    // - Encrypt desabilitado local (TLS handshake lento) pode ser reativado em produção
-    // - Application Name para facilitar análise
-    if (!baseConn.Contains("Application Name", StringComparison.OrdinalIgnoreCase))
-        baseConn += (baseConn.Trim().EndsWith(";") ? string.Empty : ";") + "Application Name=BackendApiDev;";
-    // Só força Encrypt=False em desenvolvimento; em produção deixar configurar externamente ou default True
-    if (!baseConn.Contains("Encrypt", StringComparison.OrdinalIgnoreCase))
+    // Normaliza opções de conexão evitando pool agressivo no ambiente local
+    var connBuilder = new DbConnectionStringBuilder
+    {
+        ConnectionString = baseConn
+    };
+
+    if (!connBuilder.ContainsKey("Application Name"))
+        connBuilder["Application Name"] = "BackendApiDev";
+
+    if (!connBuilder.ContainsKey("Encrypt"))
     {
         if (builder.Environment.IsDevelopment())
-            baseConn += "Encrypt=False;"; // ambiente local
+        {
+            connBuilder["Encrypt"] = "False";
+        }
         else
-            baseConn += "Encrypt=True;TrustServerCertificate=True;"; // ajustar TrustServerCertificate se houver cadeia válida
+        {
+            connBuilder["Encrypt"] = "True";
+            if (!connBuilder.ContainsKey("TrustServerCertificate"))
+                connBuilder["TrustServerCertificate"] = "True";
+        }
     }
-    if (!baseConn.Contains("Max Pool Size", StringComparison.OrdinalIgnoreCase))
-        baseConn += "Max Pool Size=100;";
-    if (!baseConn.Contains("Min Pool Size", StringComparison.OrdinalIgnoreCase))
-        baseConn += "Min Pool Size=5;";
-    if (!baseConn.Contains("Pooling", StringComparison.OrdinalIgnoreCase))
-        baseConn += "Pooling=true;";
-
-    string Sanitize(string cs)
+    else if (!builder.Environment.IsDevelopment() &&
+             string.Equals(connBuilder["Encrypt"]?.ToString(), "True", StringComparison.OrdinalIgnoreCase) &&
+             !connBuilder.ContainsKey("TrustServerCertificate"))
     {
-        try
-        {
-            return System.Text.RegularExpressions.Regex.Replace(cs, @"(?i)(Password|Pwd)=[^;]*", "$1=***");
-        }
-        catch
-        {
-            return cs;
-        }
+        connBuilder["TrustServerCertificate"] = "True";
     }
 
-    logger.LogInformation("[DB] Empresa {Empresa} conectada com string sanitizada: {Conexao}", contextoEmpresa.IdentificadorEmpresa, Sanitize(baseConn));
+    if (!connBuilder.ContainsKey("Max Pool Size"))
+        connBuilder["Max Pool Size"] = 100;
+
+    if (builder.Environment.IsDevelopment())
+    {
+        connBuilder["Min Pool Size"] = 0;
+    }
+    else if (!connBuilder.ContainsKey("Min Pool Size"))
+    {
+        connBuilder["Min Pool Size"] = 5;
+    }
+
+    if (!connBuilder.ContainsKey("Pooling"))
+        connBuilder["Pooling"] = true;
+
+    if (!connBuilder.ContainsKey("Connect Timeout") && !connBuilder.ContainsKey("Connection Timeout"))
+        connBuilder["Connect Timeout"] = 60;
+
+    baseConn = connBuilder.ConnectionString;
 
     options
         .UseSqlServer(baseConn, sql =>
         {
-            sql.CommandTimeout(30); // reduzir de 120 para 30
             sql.EnableRetryOnFailure(
                 maxRetryCount: 5,
                 maxRetryDelay: TimeSpan.FromSeconds(5),
                 errorNumbersToAdd: null);
+            sql.CommandTimeout(60); // Aumentado para 60 segundos para consultas complexas e ambientes lentos
         })
         .AddInterceptors(new Backend.Api.Data.Interceptors.SlowQueryInterceptor( thresholdMilliseconds: 300));
 });
@@ -158,15 +241,17 @@ builder.Services.AddSingleton<ICacheService, CacheService>();
 // Register application services
 builder.Services.AddScoped<IMDFeService, MDFeService>();
 
-// Registro condicional do provider MDFe
+// Registro condicional do provider MDFe - SINGLETON para evitar múltiplas inicializações da DLL nativa
 var mdfeProviderSetting = builder.Configuration.GetValue<string>("MDFe:Provider")?.ToLowerInvariant();
 if (mdfeProviderSetting == "stub")
 {
-    builder.Services.AddScoped<IMDFeProvider, StubMDFeProvider>();
+    builder.Services.AddSingleton<IMDFeProvider, StubMDFeProvider>();
+    Console.WriteLine("✓ MDFe Provider: STUB (simulação)");
 }
 else
 {
-    builder.Services.AddScoped<IMDFeProvider, AcbrLibMDFeProvider>();
+    builder.Services.AddSingleton<IMDFeProvider, AcbrLibMDFeProvider>();
+    Console.WriteLine("✓ MDFe Provider: ACBrLib (produção) - Singleton compartilhado");
 }
 
 builder.Services.AddScoped<IIBGEService, IBGEService>();
@@ -281,20 +366,21 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-var contextoEmpresaApp = app.Services.GetRequiredService<IContextoEmpresa>();
-var caminhoLogos = Path.Combine(contextoEmpresaApp.Armazenamento.CaminhoBase, contextoEmpresaApp.Armazenamento.PastaLogos);
-if (Directory.Exists(caminhoLogos))
-{
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(caminhoLogos),
-        RequestPath = "/arquivos/logos",
-        OnPrepareResponse = context =>
-        {
-            context.Context.Response.Headers["Cache-Control"] = "public,max-age=300";
-        }
-    });
-}
+// Comentado: Em multi-tenant, o contexto é resolvido por requisição
+// var contextoEmpresaApp = app.Services.GetRequiredService<IContextoEmpresa>();
+// var caminhoLogos = Path.Combine(contextoEmpresaApp.Armazenamento.CaminhoBase, contextoEmpresaApp.Armazenamento.PastaLogos);
+// if (Directory.Exists(caminhoLogos))
+// {
+//     app.UseStaticFiles(new StaticFileOptions
+//     {
+//         FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(caminhoLogos),
+//         RequestPath = "/arquivos/logos",
+//         OnPrepareResponse = context =>
+//         {
+//             context.Context.Response.Headers["Cache-Control"] = "public,max-age=300";
+//         }
+//     });
+// }
 
 // REMOVIDO temporariamente para desenvolvimento - Permitir HTTP para testes
 // app.UseHttpsRedirection(); // Reativar em produção
@@ -321,6 +407,9 @@ else
 {
     app.UseCors("Production");
 }
+
+// Multi-tenant middleware (DEVE vir ANTES de Authentication)
+app.UseTenantMiddleware();
 
 // REMOVIDO temporariamente para desenvolvimento - Reativar em produção
 // app.UseAuthentication();
@@ -374,41 +463,83 @@ if (app.Environment.IsDevelopment())
     app.MapFallbackToFile("index.html");
 }
 
-// Ensure database is created
+// Ensure ALL tenant databases are created and seeded
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<SistemaContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var tenantConfigs = scope.ServiceProvider.GetRequiredService<IOptions<ConfiguracoesEmpresas>>().Value;
+    
+    logger.LogInformation("[STARTUP] Inicializando bancos de dados multi-tenant");
 
-    try
+    foreach (var empresaConfig in tenantConfigs.Empresas.Where(e => e.Ativo))
     {
-        // Apply pending migrations
-        context.Database.Migrate();
-        logger.LogInformation("Database migrations applied successfully");
-
-        // Seed opcional controlado por variável de ambiente
-        if (Environment.GetEnvironmentVariable("SEED_DATABASE") == "1")
+        logger.LogInformation("[STARTUP] Processando empresa: {Empresa}", empresaConfig.NomeExibicao);
+        
+        try
         {
+            // Criar OpcoesEmpresa para esta empresa
+            var opcoesEmpresa = new OpcoesEmpresa
+            {
+                IdentificadorEmpresa = empresaConfig.Id,
+                NomeExibicao = empresaConfig.NomeExibicao,
+                StringConexao = empresaConfig.StringConexao,
+                Armazenamento = new OpcoesArmazenamentoEmpresa
+                {
+                    CaminhoBase = string.IsNullOrWhiteSpace(empresaConfig.CertificadoCaminho) 
+                        ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "arquivos", empresaConfig.Id) 
+                        : Path.GetDirectoryName(empresaConfig.CertificadoCaminho) ?? AppDomain.CurrentDomain.BaseDirectory,
+                    PastaLogos = "logos",
+                    PastaCertificados = "certificados",
+                    PastaXml = "xml"
+                },
+                IdentidadeVisual = new OpcoesIdentidadeVisualEmpresa
+                {
+                    ArquivoLogotipo = empresaConfig.Logo,
+                    CorPrimaria = empresaConfig.CorPrimaria
+                }
+            };
+
+            // Criar contexto específico para esta empresa
+            var optionsBuilder = new DbContextOptionsBuilder<SistemaContext>();
+            optionsBuilder.UseSqlServer(empresaConfig.StringConexao, sql =>
+            {
+                sql.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(3),
+                    errorNumbersToAdd: null);
+                sql.CommandTimeout(30);
+            });
+
+            using var context = new SistemaContext(optionsBuilder.Options);
+            
+            logger.LogInformation("[STARTUP] Aplicando migrations para: {Empresa}", empresaConfig.NomeExibicao);
+            
+            // Apply pending migrations
+            context.Database.Migrate();
+            logger.LogInformation("[STARTUP] ✓ Migrations aplicadas para: {Empresa}", empresaConfig.NomeExibicao);
+
+            // Seed automático do usuário programador e permissões
             try
             {
                 await DatabaseSeeder.SeedAsync(context, logger);
+                logger.LogInformation("[STARTUP] ✓ Seed concluído para: {Empresa}", empresaConfig.NomeExibicao);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Erro durante seed opcional");
+                logger.LogError(ex, "[STARTUP] Erro durante seed para empresa {Empresa} - continuando", empresaConfig.NomeExibicao);
             }
         }
-
+        catch (Exception ex) when (ex.Message.Contains("multiple cascade paths") || ex.Message.Contains("cascade"))
+        {
+            logger.LogWarning(ex, "[STARTUP] Erro de foreign key para empresa {Empresa} - continuando", empresaConfig.NomeExibicao);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[STARTUP] Erro ao processar empresa {Empresa}", empresaConfig.NomeExibicao);
+        }
     }
-    catch (Exception ex) when (ex.Message.Contains("multiple cascade paths") || ex.Message.Contains("cascade"))
-    {
-        // Ignore foreign key constraint errors - database creation may have partially succeeded
-        logger.LogWarning(ex, "Foreign key constraint error during database creation - continuing anyway");
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "An error occurred while applying database migrations");
-    }
+    
+    logger.LogInformation("[STARTUP] ✓ Inicialização multi-tenant concluída");
 }
 
 app.Run();

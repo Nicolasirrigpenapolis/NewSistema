@@ -23,7 +23,7 @@ namespace Backend.Api.Services
 
         public async Task<PagedResult<MDFeResponseDto>> GetMDFesAsync(int? emitenteId, int pagina, int tamanhoPagina)
         {
-            // Para cenário simples (apenas filtro de emitente) usamos compiled query base
+            // Para cenï¿½rio simples (apenas filtro de emitente) usamos compiled query base
             IQueryable<MDFe> query;
             if (!emitenteId.HasValue)
             {
@@ -34,7 +34,7 @@ namespace Backend.Api.Services
             }
             else
             {
-                // Usar compiled (stream) e materializar somente página
+                // Usar compiled (stream) e materializar somente pï¿½gina
                 var lista = new List<MDFe>();
                 await foreach (var m in Data.CompiledQueries.MDFeCompiledQueries.MDFesBase(_context, emitenteId))
                 {
@@ -213,10 +213,10 @@ namespace Backend.Api.Services
 
             var ufIni = !string.IsNullOrWhiteSpace(mdfeDto.UfIni)
                 ? mdfeDto.UfIni!.Trim().ToUpper()
-                : null; // Não definir valor padrão - deixar null se não informado
+                : null; // Nï¿½o definir valor padrï¿½o - deixar null se nï¿½o informado
             var ufFim = !string.IsNullOrWhiteSpace(mdfeDto.UfFim)
                 ? mdfeDto.UfFim!.Trim().ToUpper()
-                : null; // Não definir valor padrão - deixar null se não informado
+                : null; // Nï¿½o definir valor padrï¿½o - deixar null se nï¿½o informado
             var municipioIni = !string.IsNullOrWhiteSpace(mdfeDto.MunicipioIni)
                 ? mdfeDto.MunicipioIni!.Trim()
                 : emitente.Municipio;
@@ -235,8 +235,8 @@ namespace Backend.Api.Services
                 SeguradoraId = mdfeDto.SeguradoraId,
                 DataEmissao = mdfeDto.DataEmissao ?? DateTime.Now,
                 DataInicioViagem = mdfeDto.DataInicioViagem,
-                UfIni = ufIni,
-                UfFim = ufFim,
+                UfIni = ufIni ?? string.Empty,
+                UfFim = ufFim ?? string.Empty,
                 MunicipioIni = municipioIni,
                 MunicipioFim = municipioFim,
                 Modal = mdfeDto.Modal ?? emitente.ModalTransporte,
@@ -301,6 +301,58 @@ namespace Backend.Api.Services
             return mdfe;
         }
 
+        /// <summary>
+        /// Cria um novo MDF-e em branco no estado "Em DigitaÃ§Ã£o"
+        /// Retorna ID e dados bÃ¡sicos para ediÃ§Ã£o no frontend
+        /// </summary>
+        public async Task<MDFe> CreateBlankMDFeAsync()
+        {
+            _logger.LogInformation("[MDFe] Criando novo MDF-e em branco");
+
+            // Buscar o primeiro emitente ativo (ou criar lÃ³gica para pegar emitente do usuÃ¡rio logado)
+            var emitente = await _context.Emitentes
+                .Where(e => e.Ativo)
+                .OrderBy(e => e.Id)
+                .FirstOrDefaultAsync();
+
+            if (emitente == null)
+                throw new InvalidOperationException("Nenhum emitente ativo encontrado no sistema");
+
+            var serie = emitente.SerieInicial;
+
+            // Buscar MDFes existentes para gerar prÃ³ximo nÃºmero
+            var mdfesExistentes = await _context.MDFes
+                .Where(m => m.EmitenteId == emitente.Id && m.Serie == serie)
+                .ToListAsync();
+
+            var numeroMdfe = MDFe.GerarProximoNumero(mdfesExistentes, emitente.Id, serie);
+
+            var mdfe = new MDFe
+            {
+                NumeroMdfe = numeroMdfe,
+                Serie = serie,
+                EmitenteId = emitente.Id,
+                DataEmissao = DateTime.Now,
+                DataCriacao = DateTime.Now,
+                StatusSefaz = MDFeStatus.Rascunho,
+                Modal = emitente.ModalTransporte,
+                TipoTransportador = emitente.TipoTransportador,
+                UnidadeMedida = "01",
+                ValorTotal = 0,
+                PesoBrutoTotal = 0,
+                Emitente = emitente
+            };
+
+            mdfe.RegistrarStatus(MDFeStatus.Rascunho, "MDF-e criado - aguardando preenchimento de dados");
+
+            _context.MDFes.Add(mdfe);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("[MDFe] MDF-e ID {Id} criado em branco. NÃºmero: {Numero}, SÃ©rie: {Serie}", 
+                mdfe.Id, mdfe.NumeroMdfe, mdfe.Serie);
+
+            return mdfe;
+        }
 
         public async Task<MDFe?> UpdateMDFeAsync(int id, MDFeCreateDto mdfeDto)
         {
@@ -343,10 +395,10 @@ namespace Backend.Api.Services
 
             var ufIni = !string.IsNullOrWhiteSpace(mdfeDto.UfIni)
                 ? mdfeDto.UfIni!.Trim().ToUpper()
-                : null; // Não definir valor padrão - deixar null se não informado
+                : null; // Nï¿½o definir valor padrï¿½o - deixar null se nï¿½o informado
             var ufFim = !string.IsNullOrWhiteSpace(mdfeDto.UfFim)
                 ? mdfeDto.UfFim!.Trim().ToUpper()
-                : null; // Não definir valor padrão - deixar null se não informado
+                : null; // Nï¿½o definir valor padrï¿½o - deixar null se nï¿½o informado
             var municipioIni = !string.IsNullOrWhiteSpace(mdfeDto.MunicipioIni)
                 ? mdfeDto.MunicipioIni!.Trim()
                 : emitente.Municipio;
@@ -364,10 +416,10 @@ namespace Backend.Api.Services
             if (mdfeDto.NumeroMdfe.HasValue && mdfeDto.NumeroMdfe.Value > 0)
                 mdfe.NumeroMdfe = mdfeDto.NumeroMdfe.Value;
 
-            mdfe.UfIni = ufIni;
-            mdfe.UfFim = ufFim;
-            mdfe.MunicipioIni = municipioIni;
-            mdfe.MunicipioFim = municipioFim;
+            mdfe.UfIni = ufIni ?? mdfe.UfIni;
+            mdfe.UfFim = ufFim ?? mdfe.UfFim;
+            mdfe.MunicipioIni = municipioIni ?? mdfe.MunicipioIni;
+            mdfe.MunicipioFim = municipioFim ?? mdfe.MunicipioFim;
             mdfe.DataEmissao = mdfeDto.DataEmissao ?? mdfe.DataEmissao;
             mdfe.DataInicioViagem = mdfeDto.DataInicioViagem ?? mdfe.DataInicioViagem;
             mdfe.Modal = mdfeDto.Modal ?? emitente.ModalTransporte;
@@ -485,10 +537,10 @@ namespace Backend.Api.Services
 
             var ufIni = !string.IsNullOrWhiteSpace(rascunhoDto.UfIni)
                 ? rascunhoDto.UfIni!.Trim().ToUpper()
-                : null; // Não definir valor padrão - deixar null se não informado
+                : null; // Nï¿½o definir valor padrï¿½o - deixar null se nï¿½o informado
             var ufFim = !string.IsNullOrWhiteSpace(rascunhoDto.UfFim)
                 ? rascunhoDto.UfFim!.Trim().ToUpper()
-                : null; // Não definir valor padrão - deixar null se não informado
+                : null; // Nï¿½o definir valor padrï¿½o - deixar null se nï¿½o informado
             var municipioIni = !string.IsNullOrWhiteSpace(rascunhoDto.MunicipioIni)
                 ? rascunhoDto.MunicipioIni!.Trim()
                 : emitente.Municipio;
@@ -508,8 +560,8 @@ namespace Backend.Api.Services
                 DataEmissao = rascunhoDto.DataEmissao ?? DateTime.Now,
                 DataInicioViagem = rascunhoDto.DataInicioViagem,
                 DataCriacao = DateTime.Now,
-                UfIni = ufIni,
-                UfFim = ufFim,
+                UfIni = ufIni ?? string.Empty,
+                UfFim = ufFim ?? string.Empty,
                 MunicipioIni = municipioIni,
                 MunicipioFim = municipioFim,
                 Modal = emitente.ModalTransporte,
@@ -623,11 +675,11 @@ namespace Backend.Api.Services
             mdfe.InfoAdicional = rascunhoDto.InfoAdicional;
 
             mdfe.UfIni = !string.IsNullOrWhiteSpace(rascunhoDto.UfIni)
-                ? rascunhoDto.UfIni!.Trim().ToUpper()
-                : null; // Não definir valor padrão - deixar null se não informado
+                ? rascunhoDto.UfIni.Trim().ToUpper()
+                : mdfe.UfIni; // MantÃ©m valor existente se nÃ£o informado
             mdfe.UfFim = !string.IsNullOrWhiteSpace(rascunhoDto.UfFim)
-                ? rascunhoDto.UfFim!.Trim().ToUpper()
-                : null; // Não definir valor padrão - deixar null se não informado
+                ? rascunhoDto.UfFim.Trim().ToUpper()
+                : mdfe.UfFim; // MantÃ©m valor existente se nÃ£o informado
             mdfe.MunicipioIni = !string.IsNullOrWhiteSpace(rascunhoDto.MunicipioIni)
                 ? rascunhoDto.MunicipioIni!.Trim()
                 : emitente.Municipio;
@@ -709,8 +761,8 @@ namespace Backend.Api.Services
                 .Where(v => v != null)
                 .Select((v, index) => new MDFeValePedagio
                 {
-                    CnpjFornecedor = SanitizeDocumento(v!.CnpjFornecedor),
-                    CnpjPagador = SanitizeDocumento(string.IsNullOrWhiteSpace(v.CnpjPagador) ? mdfe.ContratanteCnpj ?? mdfe.EmitenteCnpj : v.CnpjPagador),
+                    CnpjFornecedor = SanitizeDocumento(v!.CnpjFornecedor) ?? string.Empty,
+                    CnpjPagador = SanitizeDocumento(string.IsNullOrWhiteSpace(v.CnpjPagador) ? mdfe.ContratanteCnpj ?? mdfe.EmitenteCnpj ?? string.Empty : v.CnpjPagador),
                     NumeroCompra = LimparTexto(v.NumeroCompra) ?? string.Empty,
                     ValorVale = v.ValorVale ?? 0m,
                     TipoVale = LimparTexto(v.TipoVale) ?? "01",
@@ -870,7 +922,7 @@ namespace Backend.Api.Services
 
         private void AplicarResponsavelTecnico(MDFe mdfe, ResponsavelTecnicoDto? responsavelDto)
         {
-            // Sempre aplicar dados fixos do Responsável Técnico da empresa
+            // Sempre aplicar dados fixos do Responsï¿½vel Tï¿½cnico da empresa
             var responsavel = mdfe.ResponsavelTecnico ?? new MDFeResponsavelTecnico();
 
             // Dados fixos da empresa
@@ -878,8 +930,8 @@ namespace Backend.Api.Services
             responsavel.NomeContato = "Nicolas Portie";
             responsavel.Email = "nicolas@irrigacaopenapolis.com.br";
             responsavel.Telefone = "1836542248";
-            responsavel.IdCsrt = null; // Não obrigatório
-            responsavel.HashCsrt = null; // Não obrigatório
+            responsavel.IdCsrt = null; // Nï¿½o obrigatï¿½rio
+            responsavel.HashCsrt = null; // Nï¿½o obrigatï¿½rio
 
             if (mdfe.ResponsavelTecnico == null)
             {
@@ -1104,7 +1156,7 @@ namespace Backend.Api.Services
                     mdfe.CodigoMunicipioCarregamento = principalCarga.CodigoIBGE;
                 if (string.IsNullOrWhiteSpace(mdfe.NomeMunicipioCarregamento))
                     mdfe.NomeMunicipioCarregamento = principalCarga.Municipio;
-                // Não definir UfIni automaticamente - deixar para o usuário informar
+                // Nï¿½o definir UfIni automaticamente - deixar para o usuï¿½rio informar
                 if (string.IsNullOrWhiteSpace(mdfe.MunicipioIni))
                     mdfe.MunicipioIni = principalCarga.Municipio ?? mdfe.MunicipioIni;
             }
@@ -1117,7 +1169,7 @@ namespace Backend.Api.Services
                     mdfe.CodigoMunicipioDescarregamento = principalDescarga.CodigoIBGE;
                 if (string.IsNullOrWhiteSpace(mdfe.NomeMunicipioDescarregamento))
                     mdfe.NomeMunicipioDescarregamento = principalDescarga.Municipio;
-                // Não definir UfFim automaticamente - deixar para o usuário informar
+                // Nï¿½o definir UfFim automaticamente - deixar para o usuï¿½rio informar
                 if (string.IsNullOrWhiteSpace(mdfe.MunicipioFim))
                     mdfe.MunicipioFim = principalDescarga.Municipio ?? mdfe.MunicipioFim;
             }
@@ -1190,7 +1242,7 @@ namespace Backend.Api.Services
 
         private async Task AtualizarLocalidadesAsync(MDFe mdfe, List<LocalidadeDto>? localidadesCarregamento, List<LocalidadeDto>? localidadesDescarregamento)
         {
-            // Carregar as collections se necessário (só se não estiverem carregadas)
+            // Carregar as collections se necessï¿½rio (sï¿½ se nï¿½o estiverem carregadas)
             if (!_context.Entry(mdfe).Collection(m => m.LocaisCarregamento).IsLoaded)
             {
                 await _context.Entry(mdfe).Collection(m => m.LocaisCarregamento).LoadAsync();
@@ -1213,7 +1265,7 @@ namespace Backend.Api.Services
                     var municipio = await _context.Municipios
                         .FirstOrDefaultAsync(m => m.Codigo == localidadeDto.CodigoIBGE);
 
-                    // Só adicionar se o município for encontrado
+                    // Sï¿½ adicionar se o municï¿½pio for encontrado
                     if (municipio != null)
                     {
                         var localCarregamento = new MDFeLocalCarregamento
@@ -1240,7 +1292,7 @@ namespace Backend.Api.Services
                     var municipio = await _context.Municipios
                         .FirstOrDefaultAsync(m => m.Codigo == localidadeDto.CodigoIBGE);
 
-                    // Só adicionar se o município for encontrado
+                    // Sï¿½ adicionar se o municï¿½pio for encontrado
                     if (municipio != null)
                     {
                         var localDescarregamento = new MDFeLocalDescarregamento

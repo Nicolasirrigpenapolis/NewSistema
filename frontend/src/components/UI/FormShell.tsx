@@ -19,6 +19,8 @@ const maxWidthClasses = {
 export function FormShell({
   title,
   subtitle,
+  headerIcon,
+  headerColor = '#3b82f6',
   actions,
   children,
   isModal = false,
@@ -56,28 +58,41 @@ export function FormShell({
     <div 
       className={`
         flex flex-col
-        bg-white dark:bg-slate-800
-        ${isModal ? 'rounded-lg shadow-2xl' : 'rounded-lg shadow-md'}
+        bg-white dark:bg-slate-950
+        border border-gray-200 dark:border-slate-800
+        ${isModal ? 'rounded-2xl shadow-2xl max-h-[90vh]' : 'rounded-xl shadow-lg'}
         ${className}
       `}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-700">
-        <div className="flex-1">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {title}
-          </h2>
-          {subtitle && (
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              {subtitle}
-            </p>
+      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-slate-800 bg-gradient-to-r from-gray-50 to-white dark:from-slate-900 dark:to-slate-950">
+        <div className="flex items-center gap-3 flex-1">
+          {headerIcon && (
+            <div 
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-lg flex-shrink-0"
+              style={{ 
+                background: `linear-gradient(135deg, ${headerColor} 0%, ${headerColor}dd 100%)` 
+              }}
+            >
+              <Icon name={headerIcon} className="text-base" />
+            </div>
           )}
+          <div className="flex-1">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
         {isModal && onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="ml-4 p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            className="ml-4 p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-110"
             aria-label="Fechar"
           >
             <Icon name="times" className="text-xl" />
@@ -99,12 +114,12 @@ export function FormShell({
       )}
 
       {/* Body */}
-      <div className="flex-1 px-6 py-6 overflow-y-auto">
+  <div className="flex-1 px-6 py-4 overflow-y-auto bg-white dark:bg-slate-950">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex flex-col items-center space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Carregando...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent dark:border-blue-400 dark:border-t-transparent"></div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Carregando...</p>
             </div>
           </div>
         ) : (
@@ -114,7 +129,7 @@ export function FormShell({
 
       {/* Footer with Actions */}
       {actions && !loading && (
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+        <div className="px-6 py-3 border-t border-gray-200 dark:border-slate-800 bg-gradient-to-r from-gray-50 to-white dark:from-slate-900 dark:to-slate-950">
           <div className="flex items-center justify-end space-x-3">
             {actions}
           </div>
@@ -127,14 +142,14 @@ export function FormShell({
   if (isModal) {
     return (
       <div 
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md"
         onClick={(e) => {
           if (e.target === e.currentTarget && onClose) {
             onClose();
           }
         }}
       >
-        <div className={`w-full ${maxWidthClasses[maxWidth]} mx-auto`}>
+        <div className={`w-full ${maxWidthClasses[maxWidth]} mx-auto animate-modal-enter`}>
           {formContent}
         </div>
       </div>
@@ -143,7 +158,7 @@ export function FormShell({
 
   // Standard page layout
   return (
-    <div className={`w-full ${maxWidthClasses[maxWidth]} mx-auto my-6`}>
+  <div className={`w-full ${maxWidthClasses[maxWidth]} mx-auto my-4`}>
       {formContent}
     </div>
   );

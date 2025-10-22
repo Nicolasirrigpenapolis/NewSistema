@@ -15,6 +15,15 @@ namespace Backend.Api.DTOs
         public int? CargoId { get; set; }
     }
 
+    public class UpdateUserRequest
+    {
+        public string? Nome { get; set; }
+        public string? Email { get; set; }
+        public string? Password { get; set; }
+        public int? CargoId { get; set; }
+        public bool? Ativo { get; set; }
+    }
+
     public class LoginResponse
     {
         public string Token { get; set; } = string.Empty;

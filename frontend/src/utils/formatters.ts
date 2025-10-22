@@ -2,8 +2,20 @@
 // Validações de negócio foram movidas para o backend
 
 // Limpar strings para enviar ao backend
-export const cleanNumericString = (value: string): string => {
-  return value.replace(/\D/g, '');
+export const cleanNumericString = (value: string | number | undefined | null): string => {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  const stringValue = String(value);
+  return stringValue.replace(/\D/g, '');
+};
+
+export const extractDigits = (value?: string | null): string => {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  return cleanNumericString(value);
 };
 
 export const cleanDecimalString = (value: string): string => {
@@ -61,7 +73,18 @@ export const formatPlaca = (value: string): string => {
     return cleanValue;
   }
 
-  return cleanValue.replace(/([A-Z]{3})(\d{4})/, '$1-$2');
+  // Formato antigo: ABC1234
+  if (/^[A-Z]{3}\d{4}$/.test(cleanValue)) {
+    return cleanValue.replace(/([A-Z]{3})(\d{4})/, '$1-$2');
+  }
+
+  // Formato Mercosul: ABC1D23
+  if (/^[A-Z]{3}\d[A-Z]\d{2}$/.test(cleanValue)) {
+    return `${cleanValue.slice(0, 3)}-${cleanValue.slice(3)}`;
+  }
+
+  // Fallback mantém separador após três caracteres
+  return `${cleanValue.slice(0, 3)}-${cleanValue.slice(3)}`;
 };
 
 export const formatTelefone = (value: string): string => {
@@ -93,6 +116,66 @@ export const formatCurrency = (value: number): string => {
   });
 };
 
+/**
+ * Formata valor monetário enquanto usuário digita
+ * Ex: "150050" -> "R$ 1.500,50"
+ */
+export const formatCurrencyInput = (value: string | number | undefined | null): string => {
+  const cleanValue = cleanNumericString(value);
+  
+  if (!cleanValue) return '';
+  
+  const numValue = Number(cleanValue) / 100;
+  
+  return numValue.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
+/**
+ * Converte string de moeda formatada para número
+ * Ex: "R$ 1.500,50" -> 1500.50
+ */
+export const parseCurrencyToNumber = (value: string): number => {
+  const cleanValue = cleanNumericString(value);
+  
+  if (!cleanValue) return 0;
+  
+  return Number(cleanValue) / 100;
+};
+
+/**
+ * Formata número com separador de milhar
+ * Ex: "150000" -> "150.000"
+ */
+export const formatNumberInput = (value: string): string => {
+  const cleanValue = cleanNumericString(value);
+  
+  if (!cleanValue) return '';
+  
+  const numValue = Number(cleanValue);
+  
+  return numValue.toLocaleString('pt-BR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  });
+};
+
+/**
+ * Converte string formatada para número
+ * Ex: "150.000" -> 150000
+ */
+export const parseFormattedNumber = (value: string): number => {
+  const cleanValue = cleanNumericString(value);
+  
+  if (!cleanValue) return 0;
+  
+  return Number(cleanValue);
+};
+
 export const formatWeight = (value: number, decimals: number = 3): string => {
   return value.toLocaleString('pt-BR', {
     minimumFractionDigits: decimals,
@@ -101,7 +184,7 @@ export const formatWeight = (value: number, decimals: number = 3): string => {
 };
 
 // Função para aplicar máscara enquanto o usuário digita
-export const applyMask = (value: string, type: 'cpf' | 'cnpj' | 'cep' | 'telefone' | 'placa'): string => {
+export const applyMask = (value: string, type: 'cpf' | 'cnpj' | 'cep' | 'telefone' | 'placa' | 'currency' | 'number'): string => {
   switch (type) {
     case 'cpf':
       return formatCPF(value);
@@ -113,6 +196,10 @@ export const applyMask = (value: string, type: 'cpf' | 'cnpj' | 'cep' | 'telefon
       return formatTelefone(value);
     case 'placa':
       return formatPlaca(value);
+    case 'currency':
+      return formatCurrencyInput(value);
+    case 'number':
+      return formatNumberInput(value);
     default:
       return value;
   }

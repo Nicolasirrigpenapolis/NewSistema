@@ -126,8 +126,6 @@ namespace Backend.Api.Controllers
             {
                 var query = GetDbSet().AsQueryable();
 
-                // Sem filtro de "Ativo" - mostra todos os registros (hard delete apenas)
-
                 // Aplicar filtro de busca
                 if (!string.IsNullOrWhiteSpace(request.Search))
                 {
@@ -143,6 +141,14 @@ namespace Backend.Api.Controllers
                     .Skip((request.Page - 1) * request.PageSize)
                     .Take(request.PageSize)
                     .ToListAsync();
+
+                // Aplicar filtro de "Ativo" DEPOIS de trazer do banco (em memória)
+                if (request.Ativo.HasValue)
+                {
+                    var ativoFilter = request.Ativo.Value;
+                    items = items.Where(e => IsEntityActive(e) == ativoFilter).ToList();
+                    totalItems = items.Count;
+                }
 
                 var startItem = totalItems > 0 ? ((request.Page - 1) * request.PageSize) + 1 : 0;
                 var endItem = totalItems > 0 ? Math.Min(request.Page * request.PageSize, totalItems) : 0;

@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { GenericForm } from '../../../components/UI/feedback/GenericForm';
 import { contratanteConfig } from '../../../components/Contratantes/ContratanteConfig';
+import { FormPageLayout } from '../../../components/UI/layout/FormPageLayout';
 import { entitiesService } from '../../../services/entitiesService';
-import { Icon } from '../../../ui';
 import { cleanNumericString } from '../../../utils/formatters';
+import { CNPJData } from '../../../types/apiResponse';
 
 interface Contratante {
   id?: number;
@@ -101,8 +102,9 @@ export function FormContratante() {
   }, [id, isEdit, contratanteFromState]);
 
   const sections = useMemo(() => {
-    return contratanteConfig.form.getSections(initialData ?? undefined);
-  }, [initialData]);
+    // Re-computar sections sempre que formData mudar (especialmente tipoDocumento)
+    return contratanteConfig.form.getSections(formData);
+  }, [formData]);
 
   const handleBack = () => {
     navigate('/contratantes');
@@ -115,19 +117,19 @@ export function FormContratante() {
     }));
   };
 
-  const handleCNPJDataFetch = (data: any) => {
+  const handleCNPJDataFetch = (data: CNPJData) => {
     if (data) {
-      const updates: Record<string, any> = {
-        razaoSocial: data.razaoSocial || data.nome,
-        nomeFantasia: data.nomeFantasia || data.fantasia,
+      const updates: Partial<Contratante> = {
+        razaoSocial: data.razaoSocial,
+        nomeFantasia: data.nomeFantasia || '',
         cep: data.cep,
-        endereco: data.logradouro || data.endereco,
+        endereco: data.logradouro,
         numero: data.numero,
-        complemento: data.complemento,
+        complemento: data.complemento || '',
         bairro: data.bairro,
         municipio: data.municipio,
         uf: data.uf,
-        codMunicipio: data.codMunicipio || 0
+        codMunicipio: data.codigoMunicipio
       };
 
       setFormData(prev => ({
@@ -189,47 +191,17 @@ export function FormContratante() {
     ? contratanteConfig.form.editSubtitle || contratanteConfig.form.subtitle
     : contratanteConfig.form.subtitle;
 
-  if (loading || (!initialData && isEdit)) {
-    return (
-      <div className="p-6 lg:p-10">
-        <div className="bg-card rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-6 flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
-          <p className="text-sm text-muted-foreground">Carregando dados do contratante...</p>
-          <button
-            onClick={handleBack}
-            className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-500 transition-colors"
-          >
-            <Icon name="arrow-left" size="sm" />
-            Voltar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 lg:p-10 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{pageTitle}</h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl">{pageSubtitle}</p>
-        </div>
-        <button
-          onClick={handleBack}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-card text-foreground hover:bg-background transition-colors"
-        >
-          <Icon name="arrow-left" size="sm" />
-          Voltar para lista
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg flex items-center gap-2">
-          <Icon name="exclamation-triangle" />
-          <span className="text-sm">{error}</span>
-        </div>
-      )}
-
+    <FormPageLayout
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      iconName={contratanteConfig.form.headerIcon}
+      headerColor={contratanteConfig.form.headerColor}
+      onBack={handleBack}
+      isLoading={loading || (!initialData && isEdit)}
+      loadingMessage="Carregando dados do contratante..."
+      error={error}
+    >
       {initialData && (
         <GenericForm<Contratante>
           data={formData as Contratante}
@@ -242,12 +214,13 @@ export function FormContratante() {
           onSave={handleSave}
           onCancel={handleBack}
           onFieldChange={handleFieldChange}
+          onCNPJDataFetch={handleCNPJDataFetch}
           hideCancelButton={false}
           submitLabel={isEdit ? 'Atualizar contratante' : 'Salvar contratante'}
           cancelLabel="Cancelar"
-          pageClassName="max-w-5xl mx-auto"
+          maxWidth="full"
         />
       )}
-    </div>
+    </FormPageLayout>
   );
 }

@@ -1,8 +1,9 @@
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.5.2.0
+VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Backend.Api", "backend\Backend.Api.csproj", "{064FF9EF-8245-4022-B826-92289B806574}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Backend.Api", "backend\Backend.Api.csproj", "{064FF9EF-8245-4022-B826-92289B806574}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,3 +23,4 @@ Global
 		SolutionGuid = {4AA62978-4E70-481B-A04C-C553D052E68E}
 	EndGlobalSection
 EndGlobal
+
