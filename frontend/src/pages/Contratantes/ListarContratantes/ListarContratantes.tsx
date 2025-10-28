@@ -176,13 +176,13 @@ export function ListarContratantes() {
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao excluir contratante');
+        throw new Error('Erro ao desativar contratante');
       }
 
       fecharModais();
       carregarContratantes();
     } catch (error) {
-      console.error('Erro ao excluir contratante:', error);
+      console.error('Erro ao desativar contratante:', error);
     } finally {
       setExcluindo(false);
     }
@@ -438,7 +438,7 @@ export function ListarContratantes() {
                     <button
                       className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => abrirModalExclusao(contratante)}
-                      title="Excluir"
+                      title="Desativar"
                     >
                       <Icon name="trash" />
                     </button>
@@ -533,8 +533,8 @@ export function ListarContratantes() {
         {/* Modal de exclusão */}
         <ConfirmDeleteModal
           isOpen={!!contratanteExclusao}
-          title="Excluir Contratante"
-          message="Tem certeza de que deseja excluir este contratante?"
+          title="Desativar Contratante"
+          message="Tem certeza de que deseja desativar este contratante? Ele não será mais exibido nas listagens."
           itemName={contratanteExclusao ? `${contratanteExclusao.razaoSocial}${contratanteExclusao.cnpj ? ` (${formatCNPJ(contratanteExclusao.cnpj)})` : contratanteExclusao.cpf ? ` (${formatCPF(contratanteExclusao.cpf)})` : ''}` : ''}
           onConfirm={handleDelete}
           onClose={fecharModais}

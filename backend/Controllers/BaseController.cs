@@ -319,28 +319,43 @@ namespace Backend.Api.Controllers
         }
 
         /// <summary>
-        /// DELETE padrão (soft delete)
+        /// DELETE padrão - DESATIVAR (soft delete)
         /// </summary>
         [HttpDelete("{id}")]
         public virtual async Task<IActionResult> Delete(int id)
         {
             try
             {
-                var entity = await GetDbSet().FindAsync(id);
+                var entity = await GetDbSet()
+                    .IgnoreQueryFilters() // Buscar mesmo se inativo
+                    .FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
+
                 if (entity == null)
                 {
                     return NotFound(new { message = "Registro não encontrado" });
                 }
 
-                // Verificar se pode deletar
+                // Verificar se já está inativo
+                if (!IsEntityActive(entity))
+                {
+                    return BadRequest(new { message = "Registro já está desativado" });
+                }
+
+                // Verificar se pode desativar
                 var (canDelete, errorMessage) = await CanDeleteAsync(entity);
                 if (!canDelete)
                 {
                     return BadRequest(new { message = errorMessage });
                 }
 
-                // SEMPRE fazer HARD DELETE - exclusão real do banco
-                GetDbSet().Remove(entity);
+                // SOFT DELETE - apenas desativa
+                SetEntityInactive(entity);
+                
+                // Definir campos de auditoria de exclusão
+                ReflectionCache.SetDataExclusaoValue(entity, DateTime.Now);
+                ReflectionCache.SetUsuarioExclusaoValue(entity, User?.Identity?.Name ?? "Sistema");
+                ReflectionCache.SetMotivoExclusaoValue(entity, "Desativado pelo usuário");
+                ReflectionCache.SetDataUltimaAlteracaoValue(entity, DateTime.Now);
 
                 await _context.SaveChangesAsync();
 
@@ -348,11 +363,56 @@ namespace Backend.Api.Controllers
                 _cacheService?.Remove($"{GetCacheKeyPrefix()}:detail:{id}");
                 _cacheService?.RemoveByPrefix(GetCacheKeyPrefix());
 
-                return NoContent();
+                return Ok(new { message = "Registro desativado com sucesso" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao excluir registro ID: {Id}", id);
+                _logger.LogError(ex, "Erro ao desativar registro ID: {Id}", id);
+                return StatusCode(500, new { message = "Erro interno do servidor", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// PUT para REATIVAR registro desativado
+        /// </summary>
+        [HttpPut("{id}/reativar")]
+        public virtual async Task<IActionResult> Reativar(int id)
+        {
+            try
+            {
+                var entity = await GetDbSet()
+                    .IgnoreQueryFilters() // Buscar mesmo se inativo
+                    .FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
+
+                if (entity == null)
+                {
+                    return NotFound(new { message = "Registro não encontrado" });
+                }
+
+                // Verificar se já está ativo
+                if (IsEntityActive(entity))
+                {
+                    return BadRequest(new { message = "Registro já está ativo" });
+                }
+
+                // REATIVAR - marca como ativo novamente
+                ReflectionCache.SetActiveValue(entity, true);
+                ReflectionCache.SetDataExclusaoValue(entity, null);
+                ReflectionCache.SetUsuarioExclusaoValue(entity, null);
+                ReflectionCache.SetMotivoExclusaoValue(entity, null);
+                ReflectionCache.SetDataUltimaAlteracaoValue(entity, DateTime.Now);
+
+                await _context.SaveChangesAsync();
+
+                // Invalidar cache específico e listagens
+                _cacheService?.Remove($"{GetCacheKeyPrefix()}:detail:{id}");
+                _cacheService?.RemoveByPrefix(GetCacheKeyPrefix());
+
+                return Ok(new { message = "Registro reativado com sucesso" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao reativar registro ID: {Id}", id);
                 return StatusCode(500, new { message = "Erro interno do servidor", error = ex.Message });
             }
         }

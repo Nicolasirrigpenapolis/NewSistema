@@ -315,19 +315,8 @@ namespace Backend.Api.Controllers
                     user.Nome = request.Nome;
                 }
 
-                if (!string.IsNullOrWhiteSpace(request.Email))
-                {
-                    // Verificar se o email já está em uso por outro usuário
-                    var emailExists = await _context.Usuarios
-                        .AnyAsync(u => u.UserName == request.Email && u.Id != id);
-                    
-                    if (emailExists)
-                    {
-                        return BadRequest(new { message = "E-mail já está em uso por outro usuário" });
-                    }
-                    
-                    user.UserName = request.Email;
-                }
+                // Email não altera o UserName - apenas armazenado como informação adicional se necessário
+                // O UserName permanece o mesmo após a criação do usuário
 
                 if (request.CargoId.HasValue)
                 {

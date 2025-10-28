@@ -36,6 +36,9 @@ namespace Backend.Api.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataExclusao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataUltimaAlteracao")
                         .HasColumnType("datetime2");
 
@@ -43,10 +46,18 @@ namespace Backend.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("MotivoExclusao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("UsuarioExclusao")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
@@ -102,8 +113,15 @@ namespace Backend.Api.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataExclusao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataUltimaAlteracao")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("MotivoExclusao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -113,6 +131,10 @@ namespace Backend.Api.Migrations
                     b.Property<string>("Telefone")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UsuarioExclusao")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
@@ -163,6 +185,9 @@ namespace Backend.Api.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataExclusao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataUltimaAlteracao")
                         .HasColumnType("datetime2");
 
@@ -174,6 +199,10 @@ namespace Backend.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("MotivoExclusao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Municipio")
                         .IsRequired()
@@ -201,6 +230,10 @@ namespace Backend.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(2)
                         .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("UsuarioExclusao")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
@@ -317,6 +350,9 @@ namespace Backend.Api.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataExclusao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataUltimaAlteracao")
                         .HasColumnType("datetime2");
 
@@ -335,6 +371,10 @@ namespace Backend.Api.Migrations
 
                     b.Property<int>("ModalTransporte")
                         .HasColumnType("int");
+
+                    b.Property<string>("MotivoExclusao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Municipio")
                         .IsRequired()
@@ -381,6 +421,10 @@ namespace Backend.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(2)
                         .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("UsuarioExclusao")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
@@ -458,6 +502,9 @@ namespace Backend.Api.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataExclusao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataUltimaAlteracao")
                         .HasColumnType("datetime2");
 
@@ -468,6 +515,10 @@ namespace Backend.Api.Migrations
                     b.Property<string>("Endereco")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("MotivoExclusao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -485,6 +536,10 @@ namespace Backend.Api.Migrations
                     b.Property<string>("Uf")
                         .HasMaxLength(2)
                         .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("UsuarioExclusao")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
@@ -2265,8 +2320,15 @@ namespace Backend.Api.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataExclusao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataUltimaAlteracao")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("MotivoExclusao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Placa")
                         .IsRequired()
@@ -2294,6 +2356,10 @@ namespace Backend.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(2)
                         .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("UsuarioExclusao")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
@@ -2366,8 +2432,15 @@ namespace Backend.Api.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataExclusao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataUltimaAlteracao")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("MotivoExclusao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("NomeFantasia")
                         .HasMaxLength(200)
@@ -2375,6 +2448,10 @@ namespace Backend.Api.Migrations
 
                     b.Property<string>("RazaoSocial")
                         .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("UsuarioExclusao")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
@@ -2405,11 +2482,18 @@ namespace Backend.Api.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataExclusao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataUltimaAlteracao")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DataUltimoLogin")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("MotivoExclusao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -2424,6 +2508,10 @@ namespace Backend.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("UsuarioExclusao")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
@@ -2449,12 +2537,19 @@ namespace Backend.Api.Migrations
                     b.Property<DateTime>("DataCriacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataExclusao")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DataUltimaAlteracao")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Marca")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("MotivoExclusao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Placa")
                         .IsRequired()
@@ -2478,6 +2573,10 @@ namespace Backend.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(2)
                         .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("UsuarioExclusao")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 

@@ -135,10 +135,10 @@ export function ListarReboques() {
         fecharModais();
         carregarReboques();
       } else {
-        throw new Error(resposta.mensagem || 'Erro ao excluir reboque');
+        throw new Error(resposta.mensagem || 'Erro ao desativar reboque');
       }
     } catch (error) {
-      console.error('Erro ao excluir reboque:', error);
+      console.error('Erro ao desativar reboque:', error);
       // Aqui você poderia mostrar um toast de erro
     } finally {
       setExcluindo(false);
@@ -388,7 +388,7 @@ export function ListarReboques() {
                     </button>
                     <button
                       className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all duration-150 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      title="Excluir"
+                      title="Desativar"
                       onClick={() => abrirModalExclusao(reboque)}
                     >
                       <Icon name="trash" />
@@ -481,8 +481,8 @@ export function ListarReboques() {
         {/* Modal de exclusão */}
         <ConfirmDeleteModal
           isOpen={modalExclusao}
-          title="Excluir Reboque"
-          message="Tem certeza de que deseja excluir este reboque?"
+          title="Desativar Reboque"
+          message="Tem certeza de que deseja desativar este reboque? Ele não será mais exibido nas listagens."
           itemName={reboqueAtual ? `reboque ${formatPlaca(reboqueAtual.placa)}` : ''}
           onConfirm={handleDelete}
           onClose={fecharModais}

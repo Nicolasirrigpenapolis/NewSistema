@@ -75,6 +75,33 @@ namespace Backend.Api.Utils
         }
 
         /// <summary>
+        /// Define valor da propriedade "DataExclusao" com cache
+        /// </summary>
+        public static void SetDataExclusaoValue(object entity, DateTime? value)
+        {
+            var dataProperty = GetCachedProperty(entity.GetType(), "DataExclusao");
+            dataProperty?.SetValue(entity, value);
+        }
+
+        /// <summary>
+        /// Define valor da propriedade "UsuarioExclusao" com cache
+        /// </summary>
+        public static void SetUsuarioExclusaoValue(object entity, string? value)
+        {
+            var usuarioProperty = GetCachedProperty(entity.GetType(), "UsuarioExclusao");
+            usuarioProperty?.SetValue(entity, value);
+        }
+
+        /// <summary>
+        /// Define valor da propriedade "MotivoExclusao" com cache
+        /// </summary>
+        public static void SetMotivoExclusaoValue(object entity, string? value)
+        {
+            var motivoProperty = GetCachedProperty(entity.GetType(), "MotivoExclusao");
+            motivoProperty?.SetValue(entity, value);
+        }
+
+        /// <summary>
         /// Limpa o cache (para uso em testes ou situações específicas)
         /// </summary>
         public static void ClearCache()

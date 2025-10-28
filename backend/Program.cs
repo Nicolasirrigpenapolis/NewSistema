@@ -463,42 +463,20 @@ if (app.Environment.IsDevelopment())
     app.MapFallbackToFile("index.html");
 }
 
-// Ensure ALL tenant databases are created and seeded
+// Verificação de bancos de dados multi-tenant (sem aplicar migrations automaticamente)
 using (var scope = app.Services.CreateScope())
 {
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var tenantConfigs = scope.ServiceProvider.GetRequiredService<IOptions<ConfiguracoesEmpresas>>().Value;
     
-    logger.LogInformation("[STARTUP] Inicializando bancos de dados multi-tenant");
+    logger.LogInformation("[STARTUP] Verificando bancos de dados multi-tenant");
 
     foreach (var empresaConfig in tenantConfigs.Empresas.Where(e => e.Ativo))
     {
-        logger.LogInformation("[STARTUP] Processando empresa: {Empresa}", empresaConfig.NomeExibicao);
+        logger.LogInformation("[STARTUP] Verificando empresa: {Empresa}", empresaConfig.NomeExibicao);
         
         try
         {
-            // Criar OpcoesEmpresa para esta empresa
-            var opcoesEmpresa = new OpcoesEmpresa
-            {
-                IdentificadorEmpresa = empresaConfig.Id,
-                NomeExibicao = empresaConfig.NomeExibicao,
-                StringConexao = empresaConfig.StringConexao,
-                Armazenamento = new OpcoesArmazenamentoEmpresa
-                {
-                    CaminhoBase = string.IsNullOrWhiteSpace(empresaConfig.CertificadoCaminho) 
-                        ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "arquivos", empresaConfig.Id) 
-                        : Path.GetDirectoryName(empresaConfig.CertificadoCaminho) ?? AppDomain.CurrentDomain.BaseDirectory,
-                    PastaLogos = "logos",
-                    PastaCertificados = "certificados",
-                    PastaXml = "xml"
-                },
-                IdentidadeVisual = new OpcoesIdentidadeVisualEmpresa
-                {
-                    ArquivoLogotipo = empresaConfig.Logo,
-                    CorPrimaria = empresaConfig.CorPrimaria
-                }
-            };
-
             // Criar contexto específico para esta empresa
             var optionsBuilder = new DbContextOptionsBuilder<SistemaContext>();
             optionsBuilder.UseSqlServer(empresaConfig.StringConexao, sql =>
@@ -512,21 +490,33 @@ using (var scope = app.Services.CreateScope())
 
             using var context = new SistemaContext(optionsBuilder.Options);
             
-            logger.LogInformation("[STARTUP] Aplicando migrations para: {Empresa}", empresaConfig.NomeExibicao);
-            
-            // Apply pending migrations
-            context.Database.Migrate();
-            logger.LogInformation("[STARTUP] ✓ Migrations aplicadas para: {Empresa}", empresaConfig.NomeExibicao);
-
-            // Seed automático do usuário programador e permissões
-            try
+            // Apenas verifica se há migrations pendentes (NÃO aplica automaticamente)
+            var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+            if (pendingMigrations.Any())
             {
-                await DatabaseSeeder.SeedAsync(context, logger);
-                logger.LogInformation("[STARTUP] ✓ Seed concluído para: {Empresa}", empresaConfig.NomeExibicao);
+                logger.LogWarning("[STARTUP] ⚠️ Empresa {Empresa} possui {Count} migration(s) pendente(s): {Migrations}", 
+                    empresaConfig.NomeExibicao, 
+                    pendingMigrations.Count(), 
+                    string.Join(", ", pendingMigrations));
+                logger.LogWarning("[STARTUP] Execute manualmente: dotnet ef database update");
             }
-            catch (Exception ex)
+            else
             {
-                logger.LogError(ex, "[STARTUP] Erro durante seed para empresa {Empresa} - continuando", empresaConfig.NomeExibicao);
+                logger.LogInformation("[STARTUP] ✓ Banco de dados atualizado para: {Empresa}", empresaConfig.NomeExibicao);
+            }
+
+            // Seed automático do usuário programador e permissões (se o banco já existir)
+            if (await context.Database.CanConnectAsync())
+            {
+                try
+                {
+                    await DatabaseSeeder.SeedAsync(context, logger);
+                    logger.LogInformation("[STARTUP] ✓ Seed concluído para: {Empresa}", empresaConfig.NomeExibicao);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "[STARTUP] Erro durante seed para empresa {Empresa} - continuando", empresaConfig.NomeExibicao);
+                }
             }
         }
         catch (Exception ex) when (ex.Message.Contains("multiple cascade paths") || ex.Message.Contains("cascade"))
@@ -535,11 +525,11 @@ using (var scope = app.Services.CreateScope())
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "[STARTUP] Erro ao processar empresa {Empresa}", empresaConfig.NomeExibicao);
+            logger.LogError(ex, "[STARTUP] Erro ao verificar empresa {Empresa}", empresaConfig.NomeExibicao);
         }
     }
     
-    logger.LogInformation("[STARTUP] ✓ Inicialização multi-tenant concluída");
+    logger.LogInformation("[STARTUP] ✓ Verificação multi-tenant concluída");
 }
 
 app.Run();

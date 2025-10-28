@@ -60,6 +60,15 @@ namespace Backend.Api.Models
 
         public DateTime? DataUltimaAlteracao { get; set; }
 
+        // Campos para Soft Delete
+        public DateTime? DataExclusao { get; set; }
+
+        [MaxLength(200)]
+        public string? UsuarioExclusao { get; set; }
+
+        [MaxLength(500)]
+        public string? MotivoExclusao { get; set; }
+
         // Relacionamentos
         public virtual ICollection<MDFe> MDFes { get; set; } = new List<MDFe>();
     }

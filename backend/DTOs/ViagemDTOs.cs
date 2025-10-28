@@ -143,8 +143,8 @@ namespace Backend.Api.DTOs
         public int Id { get; set; }
     }
 
-    // DTOs para filtros de relatório
-    public class RelatorioDespesasFiltroDto
+    // DTOs para filtros de relatório de viagem
+    public class RelatorioViagemFiltroDto
     {
         public DateTime? DataInicio { get; set; }
         public DateTime? DataFim { get; set; }
@@ -156,9 +156,12 @@ namespace Backend.Api.DTOs
         public string? SortDirection { get; set; } = "desc";
         public string? UsuarioSolicitante { get; set; }
         public string? TituloRelatorio { get; set; }
+        
+        // Filtro avançado para exportação (modal)
+        public int? CondutorId { get; set; }
     }
 
-    public class RelatorioDespesasItemDto
+    public class RelatorioViagemItemDto
     {
         public int Id { get; set; }
         public string VeiculoPlaca { get; set; } = string.Empty;
@@ -174,14 +177,14 @@ namespace Backend.Api.DTOs
         public Dictionary<string, decimal> DespesasPorTipo { get; set; } = new Dictionary<string, decimal>();
     }
 
-    public class RelatorioDespesasResumoDto
+    public class RelatorioViagemResumoDto
     {
         public int TotalViagens { get; set; }
         public decimal ReceitaTotalGeral { get; set; }
         public decimal DespesaTotalGeral { get; set; }
         public decimal SaldoLiquidoGeral { get; set; }
         public Dictionary<string, decimal> DespesasPorTipo { get; set; } = new Dictionary<string, decimal>();
-        public List<RelatorioDespesasItemDto> Viagens { get; set; } = new List<RelatorioDespesasItemDto>();
+        public List<RelatorioViagemItemDto> Viagens { get; set; } = new List<RelatorioViagemItemDto>();
     }
 
     // DTOs para tipos de despesa

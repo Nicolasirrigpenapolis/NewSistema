@@ -22,5 +22,12 @@ namespace Backend.Api.Models
         public DateTime DataCriacao { get; set; } = DateTime.Now;
         public DateTime? DataUltimaAlteracao { get; set; }
         public DateTime? DataUltimoLogin { get; set; }
+
+        // Soft Delete
+        public DateTime? DataExclusao { get; set; }
+        [MaxLength(200)]
+        public string? UsuarioExclusao { get; set; }
+        [MaxLength(500)]
+        public string? MotivoExclusao { get; set; }
     }
 }

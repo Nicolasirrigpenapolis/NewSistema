@@ -132,17 +132,17 @@ export function ListarFornecedores() {
   };
 
   const handleDelete = async (id: number, nome: string) => {
-    if (window.confirm(`Tem certeza que deseja excluir o fornecedor "${nome}"?`)) {
+    if (window.confirm(`Tem certeza que deseja desativar o fornecedor "${nome}"? Ele não será mais exibido nas listagens.`)) {
       try {
         const response = await fornecedoresService.deleteFornecedor(id);
 
         if (response.success) {
           await carregarFornecedores();
         } else {
-          console.error(response.message || 'Erro ao excluir fornecedor');
+          console.error(response.message || 'Erro ao desativar fornecedor');
         }
       } catch (err) {
-        console.error('Erro inesperado ao excluir fornecedor:', err);
+        console.error('Erro inesperado ao desativar fornecedor:', err);
       }
     }
   };
@@ -379,7 +379,7 @@ export function ListarFornecedores() {
                     <button
                       className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => handleDelete(fornecedor.id, fornecedor.nome)}
-                      title="Excluir"
+                      title="Desativar"
                     >
                       <Icon name="trash" />
                     </button>

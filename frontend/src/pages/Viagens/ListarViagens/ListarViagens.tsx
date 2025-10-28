@@ -4,8 +4,10 @@ import { Icon } from '../../../ui';
 import Icon2 from '../../../components/UI/Icon';
 import { relatoriosService, RelatorioDespesasFiltro, RelatorioDespesasItem } from '../../../services/relatoriosService';
 import { viagensService } from '../../../services/viagensService';
+import { entitiesService } from '../../../services/entitiesService';
 import { useEmitente } from '../../../contexts/EmitenteContext';
 import { GenericViewModal } from '../../../components/UI/feedback/GenericViewModal';
+import { ModalExportacao, FiltrosExportacao } from '../../../components/UI/feedback';
 import { viagemConfig } from '../../../components/Viagens/ViagemConfig';
 
 interface PaginationData {
@@ -24,6 +26,8 @@ export function ListarViagens() {
   const { nomeExibicao, logoUrl } = useEmitente();
   const [viagens, setViagens] = useState<RelatorioDespesasItem[]>([]);
   const [carregando, setCarregando] = useState(false);
+  const [modalExportacao, setModalExportacao] = useState(false);
+  const [condutores, setCondutores] = useState<Array<{ value: number; label: string }>>([]);
 
   // Estados temporários dos filtros
   const [filtroDataInicioTemp, setFiltroDataInicioTemp] = useState('');
@@ -55,9 +59,24 @@ export function ListarViagens() {
   const [paginacao, setPaginacao] = useState<PaginationData | null>(null);
 
   useEffect(() => {
+    carregarCondutores();
+  }, []);
+
+  useEffect(() => {
     carregarDados();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtros]);
+
+  const carregarCondutores = async () => {
+    try {
+      const response = await entitiesService.obterCondutores();
+      if (Array.isArray(response)) {
+        setCondutores(response.map(c => ({ value: c.id, label: c.label })));
+      }
+    } catch (error) {
+      console.error('Erro ao carregar condutores:', error);
+    }
+  };
 
   const carregarDados = async () => {
     try {
@@ -148,6 +167,34 @@ export function ListarViagens() {
     }
   };
 
+  const handleExportar = async (params: FiltrosExportacao) => {
+    const { formato, ...filtrosExportacao } = params;
+
+    // Remover page e pageSize dos filtros base e combinar com os novos
+    const { page, pageSize, ...filtrosBase } = filtros;
+
+    const filtrosCompletos = {
+      ...filtrosBase,
+      dataInicio: params.dataInicio,
+      dataFim: params.dataFim,
+      placa: params.placa,
+      tipoDespesa: params.tipoDespesa,
+      condutorId: params.condutorId
+    };
+
+    if (formato === 'excel') {
+      const response = await relatoriosService.exportarDespesasExcel(filtrosCompletos);
+      if (response.success && response.data) {
+        relatoriosService.downloadFile(response.data, 'relatorio-viagens.xlsx');
+      }
+    } else {
+      const response = await relatoriosService.exportarDespesasPdf(filtrosCompletos);
+      if (response.success && response.data) {
+        relatoriosService.downloadFile(response.data, 'relatorio-viagens.pdf');
+      }
+    }
+  };
+
   if (carregando) {
     return (
       <div className="min-h-screen bg-background">
@@ -181,13 +228,26 @@ export function ListarViagens() {
               <p className="text-muted-foreground text-lg">Controle e acompanhe todas as viagens registradas</p>
             </div>
           </div>
-          <button
-            className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
-            onClick={() => navigate('/viagens/nova')}
-          >
-            <Icon2 name="plus" size="lg" />
-            <span>Nova Viagem</span>
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Botão de Exportação Unificado */}
+            <button
+              onClick={() => setModalExportacao(true)}
+              disabled={viagens.length === 0}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Exportar Relatório"
+            >
+              <Icon2 name="download" />
+              <span>Exportar</span>
+            </button>
+
+            <button
+              className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl transform hover:scale-105"
+              onClick={() => navigate('/viagens/nova')}
+            >
+              <Icon2 name="plus" size="lg" />
+              <span>Nova Viagem</span>
+            </button>
+          </div>
         </div>
 
         {/* Filtros */}
@@ -447,6 +507,24 @@ export function ListarViagens() {
             variant: 'primary'
           }
         ] : []}
+      />
+
+      {/* Modal de Exportação */}
+      <ModalExportacao
+        isOpen={modalExportacao}
+        onClose={() => setModalExportacao(false)}
+        onExportar={handleExportar}
+        filtrosIniciais={{
+          dataInicio: filtros.dataInicio,
+          dataFim: filtros.dataFim,
+          placa: filtros.placa,
+          tipoDespesa: filtros.tipoDespesa,
+          formato: 'excel'
+        }}
+        tipoRelatorio="viagens"
+        opcoesFiltros={{
+          condutores: condutores
+        }}
       />
     </div>
   );

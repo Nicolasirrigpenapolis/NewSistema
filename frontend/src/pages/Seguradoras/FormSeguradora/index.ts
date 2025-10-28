@@ -1,1 +1,0 @@
-export { FormSeguradora } from './FormSeguradora';

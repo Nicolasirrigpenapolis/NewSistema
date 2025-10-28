@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { mdfeService } from '../../../services/mdfeService';
 import { entitiesService } from '../../../services/entitiesService';
 import { MDFeData, EntidadesCarregadas, MdfeTransmissaoResponse } from '../../../types/mdfe';
@@ -9,6 +9,8 @@ import { ErrorDisplay } from '../../../components/UI/ErrorDisplay/ErrorDisplay';
 export function FormularioMDFe() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const modoVisualizacao = searchParams.get('modo') === 'visualizar';
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string>('');
   const [transmitindo, setTransmitindo] = useState(false);

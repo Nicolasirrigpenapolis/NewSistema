@@ -17,6 +17,19 @@ interface Option {
   label: string;
 }
 
+/**
+ * Formata uma data no formato ISO (YYYY-MM-DD) para o formato brasileiro (DD/MM/YYYY)
+ * sem problemas de timezone
+ */
+const formatDateBR = (isoDate: string): string => {
+  if (!isoDate) return '';
+  // Remove qualquer parte de tempo (se houver) e pega apenas a data
+  const datePart = isoDate.split('T')[0];
+  // Divide em partes [YYYY, MM, DD] e inverte para [DD, MM, YYYY]
+  const [year, month, day] = datePart.split('-');
+  return `${day}/${month}/${year}`;
+};
+
 const parseCurrency = (value: string | number | undefined | null): number => {
   if (value === null || value === undefined) return 0;
   if (typeof value === 'number') return value;
@@ -239,7 +252,7 @@ const ReceitasManager: React.FC<{ value?: ReceitaViagem[]; onChange: (receitas: 
                     <p className="text-xs text-muted-foreground">Valor</p>
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{new Date(receita.dataReceita).toLocaleDateString('pt-BR')}</p>
+                    <p className="font-medium text-foreground">{formatDateBR(receita.dataReceita)}</p>
                     <p className="text-xs text-muted-foreground">Data</p>
                   </div>
                   <div className="flex items-center justify-end">
@@ -269,7 +282,7 @@ const ReceitasManager: React.FC<{ value?: ReceitaViagem[]; onChange: (receitas: 
           itemName={value[deleteModal.index]?.descricao || ''}
           itemDetails={[
             { label: 'Valor', value: (value[deleteModal.index]?.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
-            { label: 'Data', value: new Date(value[deleteModal.index]?.dataReceita || '').toLocaleDateString('pt-BR') },
+            { label: 'Data', value: formatDateBR(value[deleteModal.index]?.dataReceita || '') },
             ...(value[deleteModal.index]?.origem ? [{ label: 'Origem', value: value[deleteModal.index].origem || '' }] : [])
           ]}
         />
@@ -470,7 +483,7 @@ const DespesasManager: React.FC<{ value?: DespesaViagem[]; onChange: (despesas: 
                     <p className="text-xs text-muted-foreground">Valor</p>
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{new Date(despesa.dataDespesa).toLocaleDateString('pt-BR')}</p>
+                    <p className="font-medium text-foreground">{formatDateBR(despesa.dataDespesa)}</p>
                     <p className="text-xs text-muted-foreground">Data</p>
                   </div>
                   <div>
@@ -507,7 +520,7 @@ const DespesasManager: React.FC<{ value?: DespesaViagem[]; onChange: (despesas: 
           itemDetails={[
             { label: 'Tipo', value: value[deleteModal.index]?.tipoDespesa || '' },
             { label: 'Valor', value: (value[deleteModal.index]?.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
-            { label: 'Data', value: new Date(value[deleteModal.index]?.dataDespesa || '').toLocaleDateString('pt-BR') },
+            { label: 'Data', value: formatDateBR(value[deleteModal.index]?.dataDespesa || '') },
             ...(value[deleteModal.index]?.local ? [{ label: 'Local', value: value[deleteModal.index].local || '' }] : [])
           ]}
         />

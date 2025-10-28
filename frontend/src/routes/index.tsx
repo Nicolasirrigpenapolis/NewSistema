@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { PrivateRoute } from '../components/Auth/PrivateRoute';
 import { PermissionGuard } from '../components/Auth/PermissionGuard';
 import { Login } from '../pages/Auth/Login/Login';
-import { Dashboard } from '../pages/Dashboard';
+import { Dashboard } from '../pages/Dashboard/Dashboard';
 import { ListarVeiculos } from '../pages/Veiculos/ListarVeiculos/ListarVeiculos';
 import { FormVeiculo } from '../pages/Veiculos/FormVeiculo/FormVeiculo';
 import { ListarReboques } from '../pages/Reboques/ListarReboques/ListarReboques';
@@ -16,17 +16,19 @@ import { ListarSeguradoras } from '../pages/Seguradoras/ListarSeguradoras/Listar
 import { FormSeguradora } from '../pages/Seguradoras/FormSeguradora/FormSeguradora';
 import { ListarMunicipios } from '../pages/Municipios/ListarMunicipios/ListarMunicipios';
 import { FormMunicipio } from '../pages/Municipios/FormMunicipio/FormMunicipio';
-import { Usuarios } from '../pages/Admin/Usuarios';
-import { FormUsuario } from '../pages/Admin/Usuarios/FormUsuario/FormUsuario';
-import { Cargos } from '../pages/Admin/Cargos/Cargos';
-import { FormPermissoes } from '../pages/Admin/Cargos/FormPermissoes/FormPermissoes';
-import { ListarManutencoes, FormManutencao } from '../pages/Manutencoes';
+import { ListarUsuarios } from '../pages/Usuarios/ListarUsuarios/ListarUsuarios';
+import { FormUsuario } from '../pages/Usuarios/FormUsuario/FormUsuario';
+import { ListarCargos } from '../pages/Cargos/ListarCargos/ListarCargos';
+import { FormPermissoes } from '../pages/Cargos/FormPermissoes/FormPermissoes';
+import { ListarManutencoes } from '../pages/Manutencoes/ListarManutencoes/ListarManutencoes';
+import { FormManutencao } from '../pages/Manutencoes/FormManutencao/FormManutencao';
 import { ListarViagens } from '../pages/Viagens/ListarViagens/ListarViagens';
 import { ListarFornecedores } from '../pages/Fornecedores/ListarFornecedores/ListarFornecedores';
 import { FornecedorForm } from '../pages/Fornecedores/FornecedorForm/FornecedorForm';
 import { FormViagem } from '../pages/Viagens/FormViagem/FormViagem';
+import { RelatorioViagens } from '../pages/Relatorios/RelatorioViagens/RelatorioViagens';
 import { ConfiguracaoEmitente } from '../pages/Configuracoes/Emitente/ConfiguracaoEmitente';
-import { MdfeVisaoGeral } from '../pages/Documentos';
+import { ListarMDFe } from '../pages/MDFe/ListarMDFe/ListarMDFe';
 import { FormularioMDFe } from '../pages/MDFe/FormularioMDFe/FormularioMDFe';
 
 const withPermission = (element: ReactElement, permission?: string) =>
@@ -72,18 +74,13 @@ export function AppRoutes(): ReactElement {
         <Route path="/municipios/novo" element={withPermission(<FormMunicipio />, 'municipios.criar')} />
         <Route path="/municipios/:id/editar" element={withPermission(<FormMunicipio />, 'municipios.editar')} />
 
-        {/* Documentos fiscais */}
-        <Route path="/documentos/mdfe" element={withPermission(<MdfeVisaoGeral />, 'mdfe.listar')} />
-        <Route path="/mdfe/novo" element={withPermission(<FormularioMDFe />, 'mdfe.criar')} />
-        <Route path="/mdfe/:id/editar" element={withPermission(<FormularioMDFe />, 'mdfe.editar')} />
-
         {/* Administração */}
-        <Route path="/admin/usuarios" element={withPermission(<Usuarios />, 'usuarios.listar')} />
+        <Route path="/admin/usuarios" element={withPermission(<ListarUsuarios />, 'usuarios.listar')} />
         <Route path="/admin/usuarios/novo" element={withPermission(<FormUsuario />, 'usuarios.criar')} />
         <Route path="/admin/usuarios/:id" element={withPermission(<FormUsuario />, 'usuarios.visualizar')} />
         <Route path="/admin/usuarios/:id/editar" element={withPermission(<FormUsuario />, 'usuarios.editar')} />
 
-        <Route path="/admin/cargos" element={withPermission(<Cargos />, 'cargos.listar')} />
+        <Route path="/admin/cargos" element={withPermission(<ListarCargos />, 'cargos.listar')} />
         <Route path="/admin/cargos/:cargoId/permissoes" element={withPermission(<FormPermissoes />, 'cargos.gerenciar_permissoes')} />
         <Route path="/configuracoes/emitente" element={withPermission(<ConfiguracaoEmitente />, 'emitente.configurar')} />
 
@@ -103,9 +100,11 @@ export function AppRoutes(): ReactElement {
         <Route path="/viagens/nova" element={withPermission(<FormViagem />, 'viagens.criar')} />
         <Route path="/viagens/editar/:id" element={withPermission(<FormViagem />, 'viagens.editar')} />
 
+        {/* Relatórios */}
+        <Route path="/relatorios/viagens" element={withPermission(<RelatorioViagens />, 'relatorios.despesas')} />
+
         {/* Redirecionamentos legados */}
         <Route path="/relatorios/manutencoes-veiculos" element={<Navigate to="/manutencoes" replace />} />
-        <Route path="/relatorios/viagens" element={<Navigate to="/viagens" replace />} />
       </Route>
 
       {/* Redirecionamento padrão */}

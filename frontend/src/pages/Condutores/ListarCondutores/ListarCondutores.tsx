@@ -151,10 +151,10 @@ export function ListarCondutores() {
         fecharModais();
         carregarCondutores();
       } else {
-        throw new Error(resposta.mensagem || 'Erro ao excluir condutor');
+        throw new Error(resposta.mensagem || 'Erro ao desativar condutor');
       }
     } catch (error) {
-      console.error('Erro ao excluir condutor:', error);
+      console.error('Erro ao desativar condutor:', error);
     } finally {
       setExcluindo(false);
     }
@@ -355,7 +355,7 @@ export function ListarCondutores() {
                     <button
                       className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => abrirModalExclusao(condutor)}
-                      title="Excluir"
+                      title="Desativar"
                     >
                       <Icon name="trash" />
                     </button>
@@ -447,11 +447,11 @@ export function ListarCondutores() {
           idField={condutorConfig.view.idField}
         />
 
-        {/* Modal de exclusão */}
+        {/* Modal de desativação */}
         <ConfirmDeleteModal
           isOpen={modalExclusao}
-          title="Excluir Condutor"
-          message="Tem certeza de que deseja excluir este condutor?"
+          title="Desativar Condutor"
+          message="Tem certeza de que deseja desativar este condutor? Ele não será mais exibido nas listagens."
           itemName={
             condutorAtual
               ? `${condutorAtual.nome} (${formatCPF(condutorAtual.cpf)})`

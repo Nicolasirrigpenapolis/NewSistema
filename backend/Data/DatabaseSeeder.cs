@@ -103,7 +103,7 @@ public static class DatabaseSeeder
             ("cargos.listar", "Listar cargos", "Permite visualizar cargos", "Administracao"),
             ("cargos.criar", "Criar cargos", "Permite criar novos cargos", "Administracao"),
             ("cargos.editar", "Editar cargos", "Permite editar cargos existentes", "Administracao"),
-            ("cargos.excluir", "Excluir cargos", "Permite excluir cargos", "Administracao"),
+            ("cargos.desativar", "Desativar cargos", "Permite desativar cargos", "Administracao"),
             ("cargos.gerenciar_permissoes", "Gerenciar permissões de cargos", "Permite gerenciar permissões atribuídas aos cargos", "Administracao"),
             ("emitente.configurar", "Configurar emitente", "Permite configurar dados do emitente", "Administracao")
         };

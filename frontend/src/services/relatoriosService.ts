@@ -292,7 +292,7 @@ class RelatoriosService {
         }
       });
 
-      const response = await api.get<RelatorioDespesasResumo>(`/relatoriodespesas/resumo?${params.toString()}`);
+      const response = await api.get<RelatorioDespesasResumo>(`/relatorioviagem/resumo?${params.toString()}`);
 
       return {
         success: true,
@@ -321,7 +321,7 @@ class RelatoriosService {
         }
       });
 
-      const response = await api.get<Record<string, any>>(`/relatoriodespesas/estatisticas?${params.toString()}`);
+      const response = await api.get<Record<string, any>>(`/relatorioviagem/estatisticas?${params.toString()}`);
 
       return {
         success: true,
@@ -353,7 +353,7 @@ class RelatoriosService {
       // Adiciona timestamp para evitar cache
       params.append('_t', Date.now().toString());
 
-      const response = await api.get<Blob>(`/relatoriodespesas/export/excel?${params.toString()}`, {
+      const response = await api.get<Blob>(`/relatorioviagem/export/excel?${params.toString()}`, {
         responseType: 'blob'
       });
 
@@ -387,7 +387,7 @@ class RelatoriosService {
       // Adiciona timestamp para evitar cache
       params.append('_t', Date.now().toString());
 
-      const response = await api.get<Blob>(`/relatoriodespesas/export/pdf?${params.toString()}`, {
+      const response = await api.get<Blob>(`/relatorioviagem/export/pdf?${params.toString()}`, {
         responseType: 'blob'
       });
 

@@ -601,6 +601,18 @@ namespace Backend.Api.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // === FILTROS GLOBAIS PARA SOFT DELETE ===
+            // Apenas registros ativos são retornados por padrão
+            builder.Entity<Veiculo>().HasQueryFilter(v => v.Ativo);
+            builder.Entity<Condutor>().HasQueryFilter(c => c.Ativo);
+            builder.Entity<Contratante>().HasQueryFilter(c => c.Ativo);
+            builder.Entity<Seguradora>().HasQueryFilter(s => s.Ativo);
+            builder.Entity<Fornecedor>().HasQueryFilter(f => f.Ativo);
+            builder.Entity<Reboque>().HasQueryFilter(r => r.Ativo);
+            builder.Entity<Emitente>().HasQueryFilter(e => e.Ativo);
+            builder.Entity<Usuario>().HasQueryFilter(u => u.Ativo);
+            builder.Entity<Cargo>().HasQueryFilter(c => c.Ativo);
+
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -162,13 +162,13 @@ export function ListarSeguradoras() {
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao excluir seguradora');
+        throw new Error('Erro ao desativar seguradora');
       }
 
       fecharModais();
       carregarSeguradoras();
     } catch (error) {
-      console.error('Erro ao excluir seguradora:', error);
+      console.error('Erro ao desativar seguradora:', error);
     } finally {
       setExcluindo(false);
     }
@@ -357,7 +357,7 @@ export function ListarSeguradoras() {
                     <button
                       className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-0"
                       onClick={() => abrirModalExclusao(seguradora)}
-                      title="Excluir"
+                      title="Desativar"
                     >
                       <Icon name="trash" />
                     </button>
@@ -452,8 +452,8 @@ export function ListarSeguradoras() {
         {/* Modal de exclusão */}
         <ConfirmDeleteModal
           isOpen={modalExclusao}
-          title="Excluir Seguradora"
-          message="Tem certeza de que deseja excluir esta seguradora?"
+          title="Desativar Seguradora"
+          message="Tem certeza de que deseja desativar esta seguradora? Ela não será mais exibida nas listagens."
           itemName={
             seguradoraExclusao
               ? `${seguradoraExclusao.razaoSocial} (${formatCNPJ(seguradoraExclusao.cnpj)})`

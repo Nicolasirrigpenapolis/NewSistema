@@ -177,10 +177,10 @@ export function ListarVeiculos() {
         fecharModais();
         carregarVeiculos();
       } else {
-        throw new Error(resposta.mensagem || 'Erro ao excluir veículo');
+        throw new Error(resposta.mensagem || 'Erro ao desativar veículo');
       }
     } catch (error) {
-      console.error('Erro ao excluir veículo:', error);
+      console.error('Erro ao desativar veículo:', error);
       // Aqui você poderia mostrar um toast de erro
     } finally {
       setExcluindo(false);
@@ -535,8 +535,8 @@ export function ListarVeiculos() {
         {/* Modal de exclusão */}
         <ConfirmDeleteModal
           isOpen={modalExclusao}
-          title="Excluir Veículo"
-          message="Tem certeza de que deseja excluir este veículo?"
+          title="Desativar Veículo"
+          message="Tem certeza de que deseja desativar este veículo? Ele não será mais exibido nas listagens."
           itemName={veiculoAtual ? formatPlaca(veiculoAtual.placa) : ''}
           onConfirm={handleDelete}
           onClose={fecharModais}
